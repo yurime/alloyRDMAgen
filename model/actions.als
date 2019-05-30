@@ -1,5 +1,17 @@
-/* Threads */
-sig Thr {}
+open util/integer
+
+/* Machine with one or more Threads */
+sig Node {}
+
+/* Thread */
+sig Thr {
+	host: one Node // host node
+}
+
+/* Variables */
+sig MemoryLocation {
+  host: one Node
+}
 
 abstract sig Action {
 	/* program order, consistency order */
@@ -9,7 +21,11 @@ abstract sig Action {
 	d, o : one Thr
 }
 
-abstract sig Sx extends Action{}
+abstract sig Sx extends LocalAction{
+	instr: one Instruction,
+	sw: one nA
+}
+fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
 
 abstract sig LocalAction extends Action{}
 fact { all a: LocalAction| o[a] = d[a]}
@@ -23,7 +39,11 @@ sig W extends LocalAction{}
 fact {all w:W| w in Writer and not(w in Reader)}
 
 /*NIC action*/
-abstract sig nA extends Action{}
+abstract sig nA extends Action{
+	instr: one Instruction
+//	host: one Node // host machine
+}
+// fact {all a: nA| host[a] = host[o[a]]}
 
 /*NIC Read*/
 abstract sig nR extends nA{}
@@ -61,19 +81,50 @@ fact {all f:nFpq| not(f in Writer) and not (f in Reader)}
 sig poll_cq extends Action {}
 fact {all p:poll_cq| not(p in Writer) and not (p in Reader)}
 
+abstract sig Instruction {
+	actions: set Action
+}
+fact {all i: Instruction, sx: Sx| sx in actions[i] iff instr[sx] = i}
+fact {all i: Instruction, a: nA| a in actions[i] iff instr[a] = i}
+
+sig Put extends Instruction {}
+fact {all p: Put| #actions[p] = 3 and #(actions[p] & Sx_put) = 1 and #(actions[p] & nRp) = 1 and #(actions[p] & nWpq) = 1}
+
+sig Get extends Instruction {}
+fact {all g: Get| #actions[g] = 3 and #(actions[g] & Sx_get) = 1 and #(actions[g] & nRpq) = 1 and #(actions[g] & nWp) = 1}
+
+sig Rga extends Instruction {}
+fact {all rga: Rga| #actions[rga] = 3 and #(actions[rga] & Sx_rga) = 1 and #(actions[rga] & nRWpq) = 1 and #(actions[rga] & nWp) = 1}
+
+sig Cas extends Instruction {}
+fact {all cas: Cas| #actions[cas] = 3 and #(actions[cas] & Sx_cas) = 1 and #(actions[cas] & nRWpq) = 1 and #(actions[cas] & nWp) = 1}
+
 sig Sx_put extends Sx {}
+
+sig Sx_get extends Sx {}
+
+sig Sx_rga extends Sx {}
 
 sig Sx_cas extends Sx {}
 
-sig Reader in Action {}
+sig Reader in Action {
+	rl: one MemoryLocation,
+	rf: one Writer,
+	rV: one Int 
+}
 
-sig Writer in Action {}
+sig Writer in Action {
+	wl: one MemoryLocation,
+	wV: one Int,
+	corf: set Reader
+}
 
 pred show { 
             //#(Action.o) > 1 and
             //#Rcas = 0 and
             //#Rga = 0 and
             //#Action = 7 and
-            #Thr = 2}
+	  #Cas = 1 and
+            #Rga = 1}
 
 run show for 10
