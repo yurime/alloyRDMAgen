@@ -40,10 +40,16 @@ fact {all w:W| w in Writer and not(w in Reader)}
 
 /*NIC action*/
 abstract sig nA extends Action{
-	instr: one Instruction
+	instr: one Instruction,
+    sw: set Action, //YM
+    cosw: set Action //YM
 //	host: one Node // host machine
 }
 // fact {all a: nA| host[a] = host[o[a]]}
+fact {all na:nA, a :sw[na]| a in nA+poll_cq}//YM: subsetequal, sw connects to nA or to poll_cq
+//fact {all na:nA | na in sw[nA] + sw[Sx] }//YM: all nA are connected by some sw (at the very least instr_sw) (is this forall exists?)
+//fact {all pq:poll_cq | pq in sw[nA] } // YM: every poll_cq is connected by sw from some relation.
+//fact {all na:nA | not na in sw[na]}
 
 /*NIC Read*/
 abstract sig nR extends nA{}
@@ -78,7 +84,9 @@ sig nFpq extends Action {}
 fact {all f:nFpq| not(f in Writer) and not (f in Reader)}
 
 /*poll_cq*/
-sig poll_cq extends Action {}
+sig poll_cq extends Action {
+  cosw: one nA
+}
 fact {all p:poll_cq| not(p in Writer) and not (p in Reader)}
 
 abstract sig Instruction {
@@ -109,15 +117,19 @@ sig Sx_cas extends Sx {}
 
 sig Reader in Action {
 	rl: one MemoryLocation,
-	rf: one Writer,
+	corf: one Writer,
 	rV: one Int 
 }
 
 sig Writer in Action {
 	wl: one MemoryLocation,
 	wV: one Int,
-	corf: set Reader
+	rf: set Reader
 }
+
+
+fact {Writer=W+U+nW+nRWpq} //YM: better defintion than for each of the Actions? Does this mean equality or subseteq?
+fact {Reader=R+U+nR+nRWpq} //YM: maybe delete if the other is better for some reason
 
 pred show { 
             //#(Action.o) > 1 and
