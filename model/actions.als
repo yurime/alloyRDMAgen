@@ -23,7 +23,7 @@ abstract sig Action {
 
 abstract sig Sx extends LocalAction{
 	instr: one Instruction,
-	sw: one nA
+	instr_sw: one nA
 }
 fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
 
@@ -41,14 +41,12 @@ fact {all w:W| w in Writer and not(w in Reader)}
 /*NIC action*/
 abstract sig nA extends Action{
 	instr: one Instruction,
-    sw: set Action, //YM
-    cosw: set Action //YM
+    instr_sw: lone nA, //YM
 //	host: one Node // host machine
 }
-// fact {all a: nA| host[a] = host[o[a]]}
-fact {all na:nA, a :sw[na]| a in nA+poll_cq}//YM: subsetequal, sw connects to nA or to poll_cq
-//fact {all na:nA | na in sw[nA] + sw[Sx] }//YM: all nA are connected by some sw (at the very least instr_sw) (is this forall exists?)
-//fact {all pq:poll_cq | pq in sw[nA] } // YM: every poll_cq is connected by sw from some relation.
+//fact {all a: nA| host[a] = host[o[a]]}
+//fact {nA in sw[nA] + sw[Sx] }//YM: all nA are connected by some sw (at the very least instr_sw) (is this forall exists?)
+//fact {poll_cq in sw[nA] } // YM: every poll_cq is connected by sw from some relation.
 //fact {all na:nA | not na in sw[na]}
 
 /*NIC Read*/
@@ -60,6 +58,7 @@ sig nRpq extends nR{}
 
 /*NIC local read*/
 sig nRp extends nR{}
+fact { all a: nRp| o[a] = d[a]}
 
 /*NIC Write*/
 abstract sig nW extends nA{}
@@ -70,6 +69,7 @@ sig nWpq extends nW{}
 
 /*NIC local write*/
 sig nWp extends nW{}
+fact { all a: nWp| o[a] = d[a]}
 
 /*NIC read-write*/
 sig nRWpq extends nA{}
@@ -84,19 +84,31 @@ sig nFpq extends Action {}
 fact {all f:nFpq| not(f in Writer) and not (f in Reader)}
 
 /*poll_cq*/
-sig poll_cq extends Action {
-  cosw: one nA
-}
+sig poll_cq extends Action {}
 fact {all p:poll_cq| not(p in Writer) and not (p in Reader)}
 
 abstract sig Instruction {
 	actions: set Action
+}{
+  all disj a1,a2:actions | o[a1]=o[a2]
 }
+
 fact {all i: Instruction, sx: Sx| sx in actions[i] iff instr[sx] = i}
 fact {all i: Instruction, a: nA| a in actions[i] iff instr[a] = i}
 
-sig Put extends Instruction {}
-fact {all p: Put| #actions[p] = 3 and #(actions[p] & Sx_put) = 1 and #(actions[p] & nRp) = 1 and #(actions[p] & nWpq) = 1}
+sig Put extends Instruction {}{ 
+  #actions = 3 and 
+  #(actions & Sx_put) = 1 and 
+  #(actions & nRp) = 1 and 
+  #(actions & nWpq) = 1 and 
+  all sx: actions & Sx_put, 
+      nrp: actions & nRp,
+      nwpq: actions & nWpq{
+          instr_sw[sx] = nrp and
+          instr_sw[nrp] = nwpq and
+          (not host[d[nwpq]] = host[o[nrp]])
+     }
+}
 
 sig Get extends Instruction {}
 fact {all g: Get| #actions[g] = 3 and #(actions[g] & Sx_get) = 1 and #(actions[g] & nRpq) = 1 and #(actions[g] & nWp) = 1}
@@ -115,11 +127,13 @@ sig Sx_rga extends Sx {}
 
 sig Sx_cas extends Sx {}
 
+fact{all disj s1,s2:Sx | not instr_sw[s1]=instr_sw[s2] }
+
 sig Reader in Action {
 	rl: one MemoryLocation,
-	corf: one Writer,
 	rV: one Int 
 }
+
 
 sig Writer in Action {
 	wl: one MemoryLocation,
@@ -128,15 +142,20 @@ sig Writer in Action {
 }
 
 
+fact{Reader in rf[Writer]}
+fact{all w:Writer| not w in rf[w]}
+fact{all w:Writer, r:Reader| r in rf[w] implies (rl[r]=wl[w] and rV[r]=wV[w]) }
+fact{all w:nRWpq+U | rl[w]=wl[w] }
+fact{all r:Reader | host[rl[r]]=host[d[r]] }
+fact{all w:Writer | host[wl[w]]=host[d[w]] }
+
 fact {Writer=W+U+nW+nRWpq} //YM: better defintion than for each of the Actions? Does this mean equality or subseteq?
 fact {Reader=R+U+nR+nRWpq} //YM: maybe delete if the other is better for some reason
 
-pred show { 
+pred p { 
             //#(Action.o) > 1 and
             //#Rcas = 0 and
-            //#Rga = 0 and
-            //#Action = 7 and
-	  #Cas = 1 and
-            #Rga = 1}
+            #Sx_put = 1 and
+            #Thr = 2}
 
-run show for 10
+run p for 4

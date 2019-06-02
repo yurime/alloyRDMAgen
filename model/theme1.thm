@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<alloy>
+
+<view>
+
+<defaultnode/>
+
+<defaultedge/>
+
+<node>
+   <type name="Int"/>
+   <type name="String"/>
+   <type name="Univ"/>
+   <type name="univ"/>
+   <type name="a/Action"/>
+   <type name="a/Cas"/>
+   <type name="a/Get"/>
+   <type name="a/Instruction"/>
+   <type name="a/LocalAction"/>
+   <type name="a/MemoryLocation"/>
+   <type name="a/nA"/>
+   <type name="a/nFpq"/>
+   <type name="a/Node"/>
+   <type name="a/nR"/>
+   <type name="a/nRp"/>
+   <type name="a/nRpq"/>
+   <type name="a/nRWpq"/>
+   <type name="a/nW"/>
+   <type name="a/nWp"/>
+   <type name="a/nWpq"/>
+   <type name="a/poll_cq"/>
+   <type name="a/Put"/>
+   <type name="a/R"/>
+   <type name="a/Rga"/>
+   <type name="a/Sx"/>
+   <type name="a/Sx_cas"/>
+   <type name="a/Sx_get"/>
+   <type name="a/Sx_put"/>
+   <type name="a/Sx_rga"/>
+   <type name="a/Thr"/>
+   <type name="a/U"/>
+   <type name="a/W"/>
+   <type name="seq/Int"/>
+   <set name="a/Reader" type="a/Action"/>
+   <set name="a/Writer" type="a/Action"/>
+</node>
+
+<edge visible="no">
+   <relation name="actions"> <type name="a/Instruction"/> <type name="a/Action"/> </relation>
+   <relation name="instr"> <type name="a/nA"/> <type name="a/Instruction"/> </relation>
+   <relation name="instr"> <type name="a/Sx"/> <type name="a/Instruction"/> </relation>
+</edge>
+
+<edge visible="no" attribute="yes">
+   <relation name="host"> <type name="a/MemoryLocation"/> <type name="a/Node"/> </relation>
+   <relation name="rl"> <type name="a/Action"/> <type name="a/MemoryLocation"/> </relation>
+   <relation name="rV"> <type name="a/Action"/> <type name="Int"/> </relation>
+   <relation name="wl"> <type name="a/Action"/> <type name="a/MemoryLocation"/> </relation>
+   <relation name="wV"> <type name="a/Action"/> <type name="Int"/> </relation>
+</edge>
+
+<edge visible="yes">
+   <relation name="host"> <type name="a/Thr"/> <type name="a/Node"/> </relation>
+</edge>
+
+</view>
+
+</alloy>
