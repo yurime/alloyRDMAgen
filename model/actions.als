@@ -14,37 +14,52 @@ sig MemoryLocation {
 }
 
 abstract sig Action {
-	/* program order, consistency order */
-	po : set Action, 
 
 	/* destination and origin thread of the action */	
 	d, o : one Thr
 }
 
-abstract sig Sx extends LocalAction{
+abstract sig LocalCPUaction extends Action{
+	/* program order, consistency order */
+	po : lone LocalCPUaction
+}
+fact { all a: LocalCPUaction| o[a] = d[a] and not (a in a.^po)}
+fact { all disj a,b: LocalCPUaction| 
+(o[a] = o[b])
+iff
+(
+  (a in b.^po) or
+  (b in a.^po) 
+)
+}
+
+/* start NIC action (start external)*/
+abstract sig Sx extends LocalCPUaction{
 	instr: one Instruction,
 	instr_sw: one nA
 }
 fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
 
-abstract sig LocalAction extends Action{}
-fact { all a: LocalAction| o[a] = d[a]}
-
 /*CPU read*/
-sig R extends LocalAction{}
+sig R extends LocalCPUaction{}
 fact {all r:R| r in Reader and not(r in Writer)}
 
 /*CPU write*/
-sig W extends LocalAction{}
+sig W extends LocalCPUaction{}
 fact {all w:W| w in Writer and not(w in Reader)}
+
+/*c-atomics*/
+sig U extends LocalCPUaction {}
+fact {all u:U| u in Writer and u in Reader}
 
 /*NIC action*/
 abstract sig nA extends Action{
 	instr: one Instruction,
-    instr_sw: lone nA, //YM
-//	host: one Node // host machine
+    instr_sw: lone nA, 
+    nic_ord_sw: lone nA,
+    poll_cq_sw: lone poll_cq 
 }
-//fact {all a: nA| host[a] = host[o[a]]}
+//fact{all na:nA | not na in na.^nic_ord_sw}
 //fact {nA in sw[nA] + sw[Sx] }//YM: all nA are connected by some sw (at the very least instr_sw) (is this forall exists?)
 //fact {poll_cq in sw[nA] } // YM: every poll_cq is connected by sw from some relation.
 //fact {all na:nA | not na in sw[na]}
@@ -55,6 +70,7 @@ fact {all r:nR| r in Reader and not(r in Writer)}
 
 /*NIC remote read*/
 sig nRpq extends nR{}
+fact { all a: nRpq| not host[o[a]] = host[d[a]]}
 
 /*NIC local read*/
 sig nRp extends nR{}
@@ -66,6 +82,7 @@ fact {all w:nW| w in Writer and not(w in Reader)}
 
 /*NIC remote write*/
 sig nWpq extends nW{}
+fact { all a: nWpq| not host[o[a]] = host[d[a]]}
 
 /*NIC local write*/
 sig nWp extends nW{}
@@ -74,17 +91,16 @@ fact { all a: nWp| o[a] = d[a]}
 /*NIC read-write*/
 sig nRWpq extends nA{}
 fact {all rw:nRWpq| rw in Writer and rw in Reader}
+fact { all a: nRWpq| not host[o[a]] = host[d[a]]}
 
-/*c-atomics*/
-sig U extends LocalAction {}
-fact {all u:U| u in Writer and u in Reader}
 
 /*RDMA Fence*/
-sig nFpq extends Action {}
+sig nFpq extends nA {}
 fact {all f:nFpq| not(f in Writer) and not (f in Reader)}
+fact { all a: nFpq| not host[o[a]] = host[d[a]]}
 
 /*poll_cq*/
-sig poll_cq extends Action {}
+sig poll_cq extends LocalCPUaction {}
 fact {all p:poll_cq| not(p in Writer) and not (p in Reader)}
 
 abstract sig Instruction {
@@ -106,18 +122,118 @@ sig Put extends Instruction {}{
       nwpq: actions & nWpq{
           instr_sw[sx] = nrp and
           instr_sw[nrp] = nwpq and
-          (not host[d[nwpq]] = host[o[nrp]])
+		   #(instr_sw[nwpq])=0
      }
 }
 
-sig Get extends Instruction {}
-fact {all g: Get| #actions[g] = 3 and #(actions[g] & Sx_get) = 1 and #(actions[g] & nRpq) = 1 and #(actions[g] & nWp) = 1}
+sig Get extends Instruction {}{
+  #actions = 3 and 
+  #(actions & Sx_get) = 1 and 
+  #(actions & nRpq) = 1 and 
+  #(actions & nWp) = 1 and 
+  all sx: actions & Sx_get, 
+      nrpq: actions & nRpq,
+      nwp: actions & nWp{
+          instr_sw[sx] = nrpq and
+          instr_sw[nrpq] = nwp and
+		   #(instr_sw[nwp])=0
+      }
+}
 
-sig Rga extends Instruction {}
-fact {all rga: Rga| #actions[rga] = 3 and #(actions[rga] & Sx_rga) = 1 and #(actions[rga] & nRWpq) = 1 and #(actions[rga] & nWp) = 1}
+sig Rga extends Instruction {}{
+  #actions = 3 and 
+  #(actions & Sx_rga) = 1 and 
+  #(actions & nRWpq) = 1 and 
+  #(actions & nWp) = 1 and 
+  all sx: actions & Sx_rga, 
+      nrwpq: actions & nRWpq,
+      nwp: actions & nWp{
+          instr_sw[sx] = nrwpq and
+          instr_sw[nrwpq] = nwp and
+		   #(instr_sw[nwp])=0
+     }
+}
 
-sig Cas extends Instruction {}
-fact {all cas: Cas| #actions[cas] = 3 and #(actions[cas] & Sx_cas) = 1 and #(actions[cas] & nRWpq) = 1 and #(actions[cas] & nWp) = 1}
+sig Cas extends Instruction {}{
+  #actions = 3 and 
+  #(actions & Sx_cas) = 1 and 
+  #(actions & nRWpq) = 1 and 
+  #(actions & nWp) = 1 and 
+  all sx: actions & Sx_cas, 
+      nrwpq: actions & nRWpq,
+      nwp: actions & nWp{
+          instr_sw[sx] = nrwpq and
+          instr_sw[nrwpq] = nwp and
+		   #(instr_sw[nwp])=0
+     }
+}
+
+// instructions with a nic fence
+sig PutF extends Instruction {}{ 
+  #actions = 4 and 
+  #(actions & Sx_put) = 1 and 
+  #(actions & nFpq) = 1 and 
+  #(actions & nRp) = 1 and 
+  #(actions & nWpq) = 1 and 
+  all sx: actions & Sx_put, 
+      nfpq: actions & nFpq,
+      nrp: actions & nRp,
+      nwpq: actions & nWpq{
+          instr_sw[sx] = nfpq and
+          instr_sw[nfpq] = nrp and
+          instr_sw[nrp] = nwpq and
+		   #(instr_sw[nwpq])=0
+     }
+}
+sig GetF extends Instruction {}{
+  #actions = 4 and 
+  #(actions & Sx_get) = 1 and 
+  #(actions & nFpq) = 1 and  
+  #(actions & nRpq) = 1 and 
+  #(actions & nWp) = 1 and 
+  all sx: actions & Sx_get, 
+      nfpq: actions & nFpq,
+      nrpq: actions & nRpq,
+      nwp: actions & nWp{
+          instr_sw[sx] = nfpq and
+          instr_sw[nfpq] = nrpq and
+          instr_sw[nrpq] = nwp and
+		   #(instr_sw[nwp])=0
+     }
+}
+sig RgaF extends Instruction {}{
+  #actions = 4 and 
+  #(actions & Sx_rga) = 1 and 
+  #(actions & nFpq) = 1 and  
+  #(actions & nRWpq) = 1 and 
+  #(actions & nWp) = 1 and 
+  all sx: actions & Sx_rga, 
+      nfpq: actions & nFpq, 
+      nrwpq: actions & nRWpq,
+      nwp: actions & nWp{
+          instr_sw[sx] = nfpq and
+          instr_sw[nfpq] = nrwpq and
+          instr_sw[nrwpq] = nwp and
+		   #(instr_sw[nwp])=0
+     }
+}
+
+sig CasF extends Instruction {}{
+  #actions = 4 and 
+  #(actions & Sx_cas) = 1 and
+  #(actions & nFpq) = 1 and   
+  #(actions & nRWpq) = 1 and 
+  #(actions & nWp) = 1 and 
+  all sx: actions & Sx_cas, 
+      nfpq: actions & nFpq, 
+      nrwpq: actions & nRWpq,
+      nwp: actions & nWp{
+          instr_sw[sx] = nfpq and
+          instr_sw[nfpq] = nrwpq and
+          instr_sw[nrwpq] = nwp and
+		   #(instr_sw[nwp])=0
+     }
+}
 
 sig Sx_put extends Sx {}
 
@@ -149,13 +265,14 @@ fact{all w:nRWpq+U | rl[w]=wl[w] }
 fact{all r:Reader | host[rl[r]]=host[d[r]] }
 fact{all w:Writer | host[wl[w]]=host[d[w]] }
 
-fact {Writer=W+U+nW+nRWpq} //YM: better defintion than for each of the Actions? Does this mean equality or subseteq?
-fact {Reader=R+U+nR+nRWpq} //YM: maybe delete if the other is better for some reason
+fact {Writer=W+U+nW+nRWpq} // YM:More succinct, but for some reason removing per each sig
+fact {Reader=R+U+nR+nRWpq} //       was slower.
 
 pred p { 
             //#(Action.o) > 1 and
             //#Rcas = 0 and
-            #Sx_put = 1 and
+           #PutF = 1 and
+            #Sx_cas = 1 and
             #Thr = 2}
 
-run p for 4
+run p for 8
