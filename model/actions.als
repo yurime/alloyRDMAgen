@@ -39,6 +39,7 @@ abstract sig Sx extends LocalCPUaction{
 	instr_sw: one nA
 }
 fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
+fact{all disj s1,s2:Sx | not instr_sw[s1]=instr_sw[s2] }
 
 /*CPU read*/
 sig R extends LocalCPUaction{}
@@ -117,9 +118,9 @@ sig Put extends Instruction {}{
   #(actions & Sx_put) = 1 and 
   #(actions & nRp) = 1 and 
   #(actions & nWpq) = 1 and 
-  all sx: actions & Sx_put, 
-      nrp: actions & nRp,
-      nwpq: actions & nWpq{
+  let sx=actions & Sx_put, 
+      nrp=actions & nRp,
+      nwpq=actions & nWpq{
           instr_sw[sx] = nrp and
           instr_sw[nrp] = nwpq and
 		   #(instr_sw[nwpq])=0
@@ -131,9 +132,9 @@ sig Get extends Instruction {}{
   #(actions & Sx_get) = 1 and 
   #(actions & nRpq) = 1 and 
   #(actions & nWp) = 1 and 
-  all sx: actions & Sx_get, 
-      nrpq: actions & nRpq,
-      nwp: actions & nWp{
+  let sx=actions & Sx_get, 
+      nrpq=actions & nRpq,
+      nwp=actions & nWp{
           instr_sw[sx] = nrpq and
           instr_sw[nrpq] = nwp and
 		   #(instr_sw[nwp])=0
@@ -145,9 +146,9 @@ sig Rga extends Instruction {}{
   #(actions & Sx_rga) = 1 and 
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1 and 
-  all sx: actions & Sx_rga, 
-      nrwpq: actions & nRWpq,
-      nwp: actions & nWp{
+  let sx=actions & Sx_rga, 
+      nrwpq=actions & nRWpq,
+      nwp=actions & nWp{
           instr_sw[sx] = nrwpq and
           instr_sw[nrwpq] = nwp and
 		   #(instr_sw[nwp])=0
@@ -159,9 +160,9 @@ sig Cas extends Instruction {}{
   #(actions & Sx_cas) = 1 and 
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1 and 
-  all sx: actions & Sx_cas, 
-      nrwpq: actions & nRWpq,
-      nwp: actions & nWp{
+  let sx=actions & Sx_cas, 
+      nrwpq=actions & nRWpq,
+      nwp=actions & nWp{
           instr_sw[sx] = nrwpq and
           instr_sw[nrwpq] = nwp and
 		   #(instr_sw[nwp])=0
@@ -175,10 +176,10 @@ sig PutF extends Instruction {}{
   #(actions & nFpq) = 1 and 
   #(actions & nRp) = 1 and 
   #(actions & nWpq) = 1 and 
-  all sx: actions & Sx_put, 
-      nfpq: actions & nFpq,
-      nrp: actions & nRp,
-      nwpq: actions & nWpq{
+  let sx=actions & Sx_put, 
+      nfpq=actions & nFpq,
+      nrp=actions & nRp,
+      nwpq=actions & nWpq{
           instr_sw[sx] = nfpq and
           instr_sw[nfpq] = nrp and
           instr_sw[nrp] = nwpq and
@@ -191,10 +192,10 @@ sig GetF extends Instruction {}{
   #(actions & nFpq) = 1 and  
   #(actions & nRpq) = 1 and 
   #(actions & nWp) = 1 and 
-  all sx: actions & Sx_get, 
-      nfpq: actions & nFpq,
-      nrpq: actions & nRpq,
-      nwp: actions & nWp{
+  let sx=actions & Sx_get, 
+      nfpq=actions & nFpq,
+      nrpq=actions & nRpq,
+      nwp=actions & nWp{
           instr_sw[sx] = nfpq and
           instr_sw[nfpq] = nrpq and
           instr_sw[nrpq] = nwp and
@@ -207,10 +208,10 @@ sig RgaF extends Instruction {}{
   #(actions & nFpq) = 1 and  
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1 and 
-  all sx: actions & Sx_rga, 
-      nfpq: actions & nFpq, 
-      nrwpq: actions & nRWpq,
-      nwp: actions & nWp{
+  let sx=actions & Sx_rga, 
+      nfpq=actions & nFpq, 
+      nrwpq=actions & nRWpq,
+      nwp=actions & nWp{
           instr_sw[sx] = nfpq and
           instr_sw[nfpq] = nrwpq and
           instr_sw[nrwpq] = nwp and
@@ -224,10 +225,10 @@ sig CasF extends Instruction {}{
   #(actions & nFpq) = 1 and   
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1 and 
-  all sx: actions & Sx_cas, 
-      nfpq: actions & nFpq, 
-      nrwpq: actions & nRWpq,
-      nwp: actions & nWp{
+  let sx=actions & Sx_cas, 
+      nfpq=actions & nFpq, 
+      nrwpq=actions & nRWpq,
+      nwp=actions & nWp{
           instr_sw[sx] = nfpq and
           instr_sw[nfpq] = nrwpq and
           instr_sw[nrwpq] = nwp and
@@ -242,8 +243,6 @@ sig Sx_get extends Sx {}
 sig Sx_rga extends Sx {}
 
 sig Sx_cas extends Sx {}
-
-fact{all disj s1,s2:Sx | not instr_sw[s1]=instr_sw[s2] }
 
 sig Reader in Action {
 	rl: one MemoryLocation,
