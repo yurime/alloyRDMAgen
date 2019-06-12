@@ -22,7 +22,8 @@ abstract sig Action {
 
 abstract sig LocalCPUaction extends Action{
 	/* program order, consistency order */
-	po : lone LocalCPUaction
+	po : lone LocalCPUaction,
+	copo : lone LocalCPUaction
 }
 fact { all a: LocalCPUaction| o[a] = d[a] and not (a in a.^po)}
 fact { all disj a,b: LocalCPUaction| 
@@ -30,10 +31,13 @@ fact { all disj a,b: LocalCPUaction|
 iff
 (
   (a in b.^po) or
-  (b in a.^po) 
+  (a in b.^copo) 
 )
 }
 
+fact { all disj a,b: LocalCPUaction| 
+  (a in po[b]) iff (b in copo[a])
+}
 /* start NIC action (start external)*/
 abstract sig Sx extends LocalCPUaction{
 	instr: one Instruction,
@@ -271,7 +275,7 @@ fact{all r:Reader | host[rl[r]]=host[d[r]] }
 fact{all w:Writer | host[wl[w]]=host[d[w]] }
 
 fact {Writer=W+U+nW+nRWpq} // YM:More succinct, but for some reason removing per each sig
-fact {Reader=R+U+nR+nRWpq} //       was slower.
+fact {Reader=R+U+nR+nRWpq} //       was slower. And, removing this is slower.
 
 pred p { 
             //#(Action.o) > 1 and
