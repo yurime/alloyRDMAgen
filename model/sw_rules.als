@@ -49,7 +49,7 @@ iff
 //------------
 //poll-cq-sw
 //------------
-
+/*
 fact{all disj na2:nA, pcq:poll_cq | 
 (pcq in poll_cq_sw[na2])
 iff 
@@ -71,16 +71,35 @@ iff
              )
             }            
           )
-  }
+  }//end of some na1,sx
   )
 }
+*/
+
+fact{all disj na2:nA, pcq:poll_cq | 
+(pcq in poll_cq_sw[na2])
+iff 
+  (some na1:nA,sx:Sx {
+      (na2 in instr_sw[na1] ) and
+      (na1 in instr_sw[sx] ) and
+      (pcq in sx.^po) and
+          (
+           #(sx.~^po & Sx) = #(pcq.~^po & poll_cq)
+           )
+  }//end of some na1,sx
+  )
+}
+
+fact{all pcq:poll_cq | one pcq.~poll_cq_sw}
+
 
 pred p { 
             //#(Action.o) > 1 and
             //#Rcas = 0 and
-            #Put = 1 and
-            #poll_cq = 1 and
-			 #(poll_cq & Sx_put.po) = 1 and
+            #Put = 2 and
+            #poll_cq = 2  and
+			 #(Sx & Sx.po) > 0 and
+			 #(poll_cq & Sx_put.po) > 0 and
             #Thr = 2}
 
-run p for 8
+run p for 10

@@ -16,7 +16,8 @@ sig MemoryLocation {
 abstract sig Action {
 
 	/* destination and origin thread of the action */	
-	d, o : one Thr
+	d, o : one Thr,
+    sw : set Action
 }
 
 abstract sig LocalCPUaction extends Action{
@@ -37,6 +38,8 @@ iff
 abstract sig Sx extends LocalCPUaction{
 	instr: one Instruction,
 	instr_sw: one nA
+}{
+	sw = instr_sw
 }
 fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
 fact{all disj s1,s2:Sx | not instr_sw[s1]=instr_sw[s2] }
@@ -59,7 +62,10 @@ abstract sig nA extends Action{
     instr_sw: lone nA, 
     nic_ord_sw: lone nA,
     poll_cq_sw: lone poll_cq 
+}{
+	sw = nic_ord_sw+poll_cq_sw+instr_sw
 }
+fact{all a:Action - (nA+Sx) | a.sw=none}
 //fact{all na:nA | not na in na.^nic_ord_sw}
 //fact {nA in sw[nA] + sw[Sx] }//YM: all nA are connected by some sw (at the very least instr_sw) (is this forall exists?)
 //fact {poll_cq in sw[nA] } // YM: every poll_cq is connected by sw from some relation.
