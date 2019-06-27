@@ -16,8 +16,7 @@ sig MemoryLocation {
 abstract sig Action {
 
 	/* destination and origin thread of the action */	
-	d, o : one Thr,
-    sw : set Action
+	d, o : one Thr
 }
 
 abstract sig LocalCPUaction extends Action{
@@ -42,23 +41,28 @@ fact { all disj a,b: LocalCPUaction|
 abstract sig Sx extends LocalCPUaction{
 	instr: one Instruction,
 	instr_sw: one nA
-}{
-	sw = instr_sw
+}
+fact{all a:Sx |
+	a.sw = a.instr_sw
 }
 fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
+fact {all sx: Sx| (sx in RDMAaction)}
 fact{all disj s1,s2:Sx | not instr_sw[s1]=instr_sw[s2] }
 
 /*CPU read*/
 sig R extends LocalCPUaction{}
 fact {all r:R| r in Reader and not(r in Writer)}
+fact {all a:R| not(a in RDMAaction)}
 
 /*CPU write*/
 sig W extends LocalCPUaction{}
 fact {all w:W| w in Writer and not(w in Reader)}
+fact {all a:W| not(a in RDMAaction)}
 
 /*c-atomics*/
 sig U extends LocalCPUaction {}
 fact {all u:U| u in Writer and u in Reader}
+fact {all a:U| not(a in RDMAaction)}
 
 /*NIC action*/
 abstract sig nA extends Action{
@@ -66,10 +70,12 @@ abstract sig nA extends Action{
     instr_sw: lone nA, 
     nic_ord_sw: lone nA,
     poll_cq_sw: lone poll_cq 
-}{
-	sw = nic_ord_sw+poll_cq_sw+instr_sw
 }
-fact{all a:Action - (nA+Sx) | a.sw=none}
+fact{all a:nA |
+	a.sw = a.nic_ord_sw+a.poll_cq_sw+a.instr_sw
+}
+fact {all a:nA| (a in RDMAaction)}
+
 //fact{all na:nA | not na in na.^nic_ord_sw}
 //fact {nA in sw[nA] + sw[Sx] }//YM: all nA are connected by some sw (at the very least instr_sw) (is this forall exists?)
 //fact {poll_cq in sw[nA] } // YM: every poll_cq is connected by sw from some relation.
@@ -113,6 +119,7 @@ fact { all a: nFpq| not host[o[a]] = host[d[a]]}
 /*poll_cq*/
 sig poll_cq extends LocalCPUaction {}
 fact {all p:poll_cq| not(p in Writer) and not (p in Reader)}
+fact {all a:poll_cq| (a in RDMAaction)}
 
 abstract sig Instruction {
 	actions: set Action
@@ -266,6 +273,9 @@ sig Writer in Action {
 	rf: set Reader
 }
 
+sig RDMAaction in Action {
+    sw : set Action}
+
 
 fact{Reader in rf[Writer]}
 fact{all w:Writer| not w in rf[w]}
@@ -276,6 +286,8 @@ fact{all w:Writer | host[wl[w]]=host[d[w]] }
 
 fact {Writer=W+U+nW+nRWpq} // YM:More succinct, but for some reason removing per each sig
 fact {Reader=R+U+nR+nRWpq} //       was slower. And, removing this is slower.
+
+fact {RDMAaction=Sx+nA+poll_cq}
 
 pred p { 
             //#(Action.o) > 1 and
