@@ -21,7 +21,7 @@ one sig Execution {
   {all disj w1,w2:Writer | (d[w1]=d[w2]) => ((w1 in w2.^mo) or (w2 in w1.^mo))}
   {all disj w1,w2:Writer | (w1 in w2.mo) =>  (d[w1]=d[w2])}
 
-//mo is acyclic
+//mo is acyclic //comes from hb rules?
 //{all w:Writer | not w in w.^mo}
 
 //hbqp definition

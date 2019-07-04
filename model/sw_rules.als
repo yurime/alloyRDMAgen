@@ -5,7 +5,102 @@ open actions as a
 //instr-sw
 //defined per instruction in action file
 
+fact{all a:Sx |
+	a.sw = a.instr_sw
+}
+fact{all disj a1,a2:Sx | not instr_sw[a1]=instr_sw[a2] }
 
+fact{all a:nA |
+	a.sw = a.nic_ord_sw+a.poll_cq_sw+a.instr_sw
+}
+//check{all disj a1,a2:nA | not instr_sw[a1]=instr_sw[a2] } --- implied from the rules below
+
+fact{all put:Put |
+  let sx=actions[put] & Sx_put, 
+      nrp=actions[put] & nRp,
+      nwpq=actions[put] & nWpq{
+          instr_sw[sx] = nrp and
+          instr_sw[nrp] = nwpq and
+		   #(instr_sw[nwpq])=0
+     }
+}
+
+fact{all get:Get |
+  let sx=actions[get] & Sx_get, 
+      nrpq=actions[get] & nRpq,
+      nwp=actions[get] & nWp{
+          instr_sw[sx] = nrpq and
+          instr_sw[nrpq] = nwp and
+		   #(instr_sw[nwp])=0
+      }
+}
+
+fact{all rga:Rga | 
+  let sx=actions[rga] & Sx_rga, 
+      nrwpq=actions[rga] & nRWpq,
+      nwp=actions[rga] & nWp{
+          instr_sw[sx] = nrwpq and
+          instr_sw[nrwpq] = nwp and
+		   #(instr_sw[nwp])=0
+     }
+}
+
+fact{all cas:Cas | 
+  let sx=actions[cas] & Sx_cas, 
+      nrwpq=actions[cas] & nRWpq,
+      nwp=actions[cas] & nWp{
+          instr_sw[sx] = nrwpq and
+          instr_sw[nrwpq] = nwp and
+		   #(instr_sw[nwp])=0
+     }
+}
+fact{all put:PutF |
+  let sx=actions[put] & Sx_put, 
+      nrp=actions[put] & nRp,
+      nfpq=actions[put] & nFpq,
+      nwpq=actions[put] & nWpq{
+          instr_sw[sx] = nfpq and
+          instr_sw[nfpq] = nrp and
+          instr_sw[nrp] = nwpq and
+		   #(instr_sw[nwpq])=0
+     }
+}
+
+fact{all get:GetF |
+  let sx=actions[get] & Sx_get, 
+      nrpq=actions[get] & nRpq,
+      nfpq=actions[get] & nFpq,
+      nwp=actions[get] & nWp{
+          instr_sw[sx] = nfpq and
+          instr_sw[nfpq] = nrpq and
+          instr_sw[nrpq] = nwp and
+		   #(instr_sw[nwp])=0
+      }
+}
+
+fact{all rga:RgaF | 
+  let sx=actions[rga] & Sx_rga, 
+      nrwpq=actions[rga] & nRWpq,
+      nfpq=actions[rga] & nFpq,
+      nwp=actions[rga] & nWp{
+          instr_sw[sx] = nfpq and
+          instr_sw[nfpq] = nrwpq and
+          instr_sw[nrwpq] = nwp and
+		   #(instr_sw[nwp])=0
+     }
+}
+
+fact{all cas:CasF | 
+  let sx=actions[cas] & Sx_cas, 
+      nrwpq=actions[cas] & nRWpq,
+      nfpq=actions[cas] & nFpq,
+      nwp=actions[cas] & nWp{
+          instr_sw[sx] = nfpq and
+          instr_sw[nfpq] = nrwpq and
+          instr_sw[nrwpq] = nwp and
+		   #(instr_sw[nwp])=0
+     }
+}
 //------------
 //nic-ord-sw :
 //-------------
@@ -49,7 +144,8 @@ iff
 //------------
 //poll-cq-sw
 //------------
-/*
+fact{all pcq:poll_cq | pcq=poll_cq_sw[co_poll_cq_sw[pcq]]}
+/*//first version --- recursive
 fact{all disj na2:nA, pcq:poll_cq | 
 (pcq in poll_cq_sw[na2])
 iff 
@@ -84,13 +180,11 @@ iff
       (na1 in instr_sw[sx] ) and
       (pcq in sx.^po) and
           (
-           #(sx.~^po & Sx) = #(pcq.~^po & poll_cq)
+           #(sx.^copo & Sx) = #(pcq.^copo & poll_cq)
            )
   }//end of some na1,sx
   )
 }
-
-fact{all pcq:poll_cq | one pcq.~poll_cq_sw}
 
 
 pred p { 
