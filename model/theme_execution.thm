@@ -47,6 +47,7 @@
    <type name="a/U"/>
    <type name="a/W"/>
    <type name="seq/Int"/>
+   <set name="$cyclic_a" type="a/Action"/>
    <set name="a/RDMAaction" type="a/Action"/>
    <set name="a/Reader" type="a/Action"/>
    <set name="a/Writer" type="a/Action"/>
@@ -60,6 +61,7 @@
    <relation name="hb"> <type name="a/Action"/> <type name="a/Action"/> </relation>
    <relation name="hbqp"> <type name="a/Action"/> <type name="a/Action"/> </relation>
    <relation name="hbs"> <type name="a/Action"/> <type name="a/Action"/> </relation>
+   <relation name="po_tc"> <type name="a/LocalCPUaction"/> <type name="a/LocalCPUaction"/> </relation>
    <relation name="sw"> <type name="a/Action"/> <type name="a/Action"/> </relation>
 </edge>
 

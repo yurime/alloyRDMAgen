@@ -56,18 +56,21 @@ sig RDMAaction in Action {
 
 abstract sig LocalCPUaction extends Action{
 	/* program order */
-	po : lone LocalCPUaction,
-	copo : lone LocalCPUaction
+	po_tc : set LocalCPUaction,
+    po: lone LocalCPUaction, // for displaying po.
+	copo : set LocalCPUaction
 }
-fact {po=~copo}
-fact{not cyclic[po]}
+fact {po_tc=^po_tc}
+fact {po_tc=~copo}
+fact{not cyclic[po_tc]}
+fact{all a:Action, b:a.po_tc | b in a.po iff #(a.po_tc - b.po_tc)=1} // for displaying po. 
 fact {all a: LocalCPUaction| o[a] = d[a]}
 fact {all disj a,b: LocalCPUaction| 
                                       (o[a] = o[b])
                                       iff
                                       (
-                                        (a in b.^po) or
-                                        (a in b.^copo) 
+                                        (a in b.po_tc) or
+                                        (a in b.copo) 
                                       )
 }
 
@@ -154,7 +157,7 @@ sig poll_cq extends LocalCPUaction {
   co_poll_cq_sw:one nA
 }
 fact {all p:poll_cq| not(p in Writer) and not (p in Reader)}
-fact {all a:poll_cq| (a in RDMAaction)}
+fact {all a:poll_cq| not (a in RDMAaction)}
 
 /* RDMA instructions and the actions that compose them*/
 abstract sig Instruction {

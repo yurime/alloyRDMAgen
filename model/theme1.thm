@@ -8,62 +8,69 @@
 <defaultedge/>
 
 <node>
+   <type name="Action"/>
+   <type name="Cas"/>
+   <type name="CasF"/>
+   <type name="Get"/>
+   <type name="GetF"/>
+   <type name="Instruction"/>
    <type name="Int"/>
+   <type name="LocalCPUaction"/>
+   <type name="MemoryLocation"/>
+   <type name="nA"/>
+   <type name="nF"/>
+   <type name="Node"/>
+   <type name="nR"/>
+   <type name="nRp"/>
+   <type name="nRpq"/>
+   <type name="nRWpq"/>
+   <type name="nW"/>
+   <type name="nWp"/>
+   <type name="nWpq"/>
+   <type name="poll_cq"/>
+   <type name="Put"/>
+   <type name="PutF"/>
+   <type name="R"/>
+   <type name="Rga"/>
+   <type name="RgaF"/>
    <type name="String"/>
-   <type name="Univ"/>
+   <type name="Sx"/>
+   <type name="Sx_cas"/>
+   <type name="Sx_get"/>
+   <type name="Sx_put"/>
+   <type name="Sx_rga"/>
+   <type name="Thr"/>
+   <type name="U"/>
    <type name="univ"/>
-   <type name="a/Action"/>
-   <type name="a/Cas"/>
-   <type name="a/CasF"/>
-   <type name="a/Get"/>
-   <type name="a/GetF"/>
-   <type name="a/Instruction"/>
-   <type name="a/LocalCPUaction"/>
-   <type name="a/MemoryLocation"/>
-   <type name="a/nA"/>
-   <type name="a/nFpq"/>
-   <type name="a/Node"/>
-   <type name="a/nR"/>
-   <type name="a/nRp"/>
-   <type name="a/nRpq"/>
-   <type name="a/nRWpq"/>
-   <type name="a/nW"/>
-   <type name="a/nWp"/>
-   <type name="a/nWpq"/>
-   <type name="a/poll_cq"/>
-   <type name="a/Put"/>
-   <type name="a/PutF"/>
-   <type name="a/R"/>
-   <type name="a/Rga"/>
-   <type name="a/RgaF"/>
-   <type name="a/Sx"/>
-   <type name="a/Sx_cas"/>
-   <type name="a/Sx_get"/>
-   <type name="a/Sx_put"/>
-   <type name="a/Sx_rga"/>
-   <type name="a/Thr"/>
-   <type name="a/U"/>
-   <type name="a/W"/>
+   <type name="W"/>
    <type name="seq/Int"/>
-   <set name="a/Reader" type="a/Action"/>
-   <set name="a/Writer" type="a/Action"/>
+   <set name="this/RDMAaction" type="Action"/>
+   <set name="this/Reader" type="Action"/>
+   <set name="this/Writer" type="Action"/>
 </node>
 
-<edge visible="no" attribute="yes">
-   <relation name="d"> <type name="a/Action"/> <type name="a/Thr"/> </relation>
-   <relation name="host"> <type name="a/MemoryLocation"/> <type name="a/Node"/> </relation>
-   <relation name="host"> <type name="a/Thr"/> <type name="a/Node"/> </relation>
-   <relation name="o"> <type name="a/Action"/> <type name="a/Thr"/> </relation>
-   <relation name="rl"> <type name="a/Action"/> <type name="a/MemoryLocation"/> </relation>
-   <relation name="rV"> <type name="a/Action"/> <type name="Int"/> </relation>
-   <relation name="wl"> <type name="a/Action"/> <type name="a/MemoryLocation"/> </relation>
-   <relation name="wV"> <type name="a/Action"/> <type name="Int"/> </relation>
+<edge visible="no">
+   <relation name="co_poll_cq_sw"> <type name="poll_cq"/> <type name="nA"/> </relation>
+   <relation name="copo"> <type name="LocalCPUaction"/> <type name="LocalCPUaction"/> </relation>
+   <relation name="corf"> <type name="Action"/> <type name="Action"/> </relation>
+   <relation name="po"> <type name="LocalCPUaction"/> <type name="LocalCPUaction"/> </relation>
 </edge>
 
-<edge visible="no">
-   <relation name="actions"> <type name="a/Instruction"/> <type name="a/Action"/> </relation>
-   <relation name="instr"> <type name="a/nA"/> <type name="a/Instruction"/> </relation>
-   <relation name="instr"> <type name="a/Sx"/> <type name="a/Instruction"/> </relation>
+<edge visible="no" attribute="no">
+   <relation name="actions"> <type name="Instruction"/> <type name="Action"/> </relation>
+</edge>
+
+<edge visible="no" attribute="yes">
+   <relation name="d"> <type name="Action"/> <type name="Thr"/> </relation>
+   <relation name="host"> <type name="MemoryLocation"/> <type name="Node"/> </relation>
+   <relation name="host"> <type name="Thr"/> <type name="Node"/> </relation>
+   <relation name="instr"> <type name="nA"/> <type name="Instruction"/> </relation>
+   <relation name="instr"> <type name="Sx"/> <type name="Instruction"/> </relation>
+   <relation name="o"> <type name="Action"/> <type name="Thr"/> </relation>
+   <relation name="rl"> <type name="Action"/> <type name="MemoryLocation"/> </relation>
+   <relation name="rV"> <type name="Action"/> <type name="Int"/> </relation>
+   <relation name="wl"> <type name="Action"/> <type name="MemoryLocation"/> </relation>
+   <relation name="wV"> <type name="Action"/> <type name="Int"/> </relation>
 </edge>
 
 </view>
