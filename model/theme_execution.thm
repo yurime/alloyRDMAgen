@@ -23,7 +23,7 @@
    <type name="a/LocalCPUaction"/>
    <type name="a/MemoryLocation"/>
    <type name="a/nA"/>
-   <type name="a/nFpq"/>
+   <type name="a/nF"/>
    <type name="a/Node"/>
    <type name="a/nR"/>
    <type name="a/nRp"/>
@@ -54,13 +54,12 @@
 
 <edge visible="no">
    <relation name="actions"> <type name="a/Instruction"/> <type name="a/Action"/> </relation>
+   <relation name="co_poll_cq_sw"> <type name="a/poll_cq"/> <type name="a/nA"/> </relation>
    <relation name="copo"> <type name="a/LocalCPUaction"/> <type name="a/LocalCPUaction"/> </relation>
+   <relation name="corf"> <type name="a/Action"/> <type name="a/Action"/> </relation>
    <relation name="hb"> <type name="a/Action"/> <type name="a/Action"/> </relation>
-   <relation name="hb"> <type name="Execution"/> <type name="a/Action"/> <type name="a/Action"/> </relation>
    <relation name="hbqp"> <type name="a/Action"/> <type name="a/Action"/> </relation>
-   <relation name="hbqp"> <type name="Execution"/> <type name="a/Action"/> <type name="a/Action"/> </relation>
    <relation name="hbs"> <type name="a/Action"/> <type name="a/Action"/> </relation>
-   <relation name="hbs"> <type name="Execution"/> <type name="a/Action"/> <type name="a/Action"/> </relation>
    <relation name="sw"> <type name="a/Action"/> <type name="a/Action"/> </relation>
 </edge>
 

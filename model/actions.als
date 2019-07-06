@@ -19,29 +19,69 @@ abstract sig Action {
 	d, o : one Thr
 }
 
+pred cyclic [rel:Action->Action] {some a:Action | a in ^rel[a]}
+pred sameOandD [a,b:Action] {o[a]=o[b] and  d[a]=d[b] }
+pred remoteMachine [a:Action] { not host[o[a]]=host[d[a]] }
+
+sig Reader in Action {
+	rl: one MemoryLocation,
+	rV: one Int,
+	corf: one Writer
+}
+
+
+sig Writer in Action {
+	wl: one MemoryLocation,
+	wV: one Int,
+	rf: set Reader
+}
+
+//rf implies shared location and value
+fact{all w:Writer, r:rf[w] | rl[r]=wl[w] and rV[r]=wV[w]}
+
+// atomic actions non recursive and atomic to one location
+fact{not cyclic[rf]}
+fact{all w:Writer&Reader | rl[w]=wl[w] }
+
+fact{~rf=corf}
+
+// read/write from the same machine as the action destination
+fact{all r:Reader | host[rl[r]]=host[d[r]] }
+fact{all w:Writer | host[wl[w]]=host[d[w]] }
+
+
+sig RDMAaction in Action {
+    sw : set Action
+}
+
 abstract sig LocalCPUaction extends Action{
 	/* program order */
 	po : lone LocalCPUaction,
 	copo : lone LocalCPUaction
 }
-fact { all a: LocalCPUaction| o[a] = d[a] and not (a in a.^po)}
-fact { all disj a,b: LocalCPUaction| 
-(o[a] = o[b])
-iff
-(
-  (a in b.^po) or
-  (a in b.^copo) 
-)
+fact {po=~copo}
+fact{not cyclic[po]}
+fact {all a: LocalCPUaction| o[a] = d[a]}
+fact {all disj a,b: LocalCPUaction| 
+                                      (o[a] = o[b])
+                                      iff
+                                      (
+                                        (a in b.^po) or
+                                        (a in b.^copo) 
+                                      )
 }
 
-fact { all disj a,b: LocalCPUaction| 
-  (a in po[b]) iff (b in copo[a])
-}
 /* start NIC action (start external)*/
 abstract sig Sx extends LocalCPUaction{
 	instr: one Instruction,
 	instr_sw: one nA
 }
+
+sig Sx_put extends Sx {}
+sig Sx_get extends Sx {}
+sig Sx_cas extends Sx {}
+sig Sx_rga extends Sx {}
+
 fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
 fact {all sx: Sx| (sx in RDMAaction)}
 
@@ -64,7 +104,7 @@ fact {all a:U| not(a in RDMAaction)}
 abstract sig nA extends Action{
 	instr: one Instruction,
     instr_sw: lone nA, 
-    nic_ord_sw: lone nA,
+    nic_ord_sw: set nA,
     poll_cq_sw: lone poll_cq 
 }
 fact {all a:nA| (a in RDMAaction)}
@@ -80,11 +120,11 @@ fact {all r:nR| r in Reader and not(r in Writer)}
 
 /*NIC remote read*/
 sig nRpq extends nR{}
-fact { all a: nRpq| not host[o[a]] = host[d[a]]}
+fact {all a: nRpq| not host[o[a]] = host[d[a]]}
 
 /*NIC local read*/
 sig nRp extends nR{}
-fact { all a: nRp| o[a] = d[a]}
+fact {all a: nRp| o[a] = d[a]}
 
 /*NIC Write*/
 abstract sig nW extends nA{}
@@ -105,9 +145,9 @@ fact { all a: nRWpq| not host[o[a]] = host[d[a]]}
 
 
 /*RDMA Fence*/
-sig nFpq extends nA {}
-fact {all f:nFpq| not(f in Writer) and not (f in Reader)}
-fact { all a: nFpq| not host[o[a]] = host[d[a]]}
+sig nF extends nA {}
+fact {all f:nF| not(f in Writer) and not (f in Reader)}
+fact { all a: nF| o[a] = d[a]}
 
 /*poll_cq*/
 sig poll_cq extends LocalCPUaction {
@@ -116,6 +156,7 @@ sig poll_cq extends LocalCPUaction {
 fact {all p:poll_cq| not(p in Writer) and not (p in Reader)}
 fact {all a:poll_cq| (a in RDMAaction)}
 
+/* RDMA instructions and the actions that compose them*/
 abstract sig Instruction {
 	actions: set Action
 }{
@@ -125,11 +166,6 @@ abstract sig Instruction {
 fact {all i: Instruction, sx: Sx| sx in actions[i] iff instr[sx] = i}
 fact {all i: Instruction, a: nA| a in actions[i] iff instr[a] = i}
 
-/* //equivalent to the above, but slower? 
-   // same time for constr. but for instance: 617ms vs. 295ms.
-fact {all sx: Sx | sx in actions[instr[sx]]}
-fact {all a: nA | a in actions[instr[a]]}
-*/
 sig Put extends Instruction {}{ 
   #actions = 3 and 
   #(actions & Sx_put) = 1 and 
@@ -162,21 +198,21 @@ sig Cas extends Instruction {}{
 sig PutF extends Instruction {}{ 
   #actions = 4 and 
   #(actions & Sx_put) = 1 and 
-  #(actions & nFpq) = 1 and 
+  #(actions & nF) = 1 and 
   #(actions & nRp) = 1 and 
   #(actions & nWpq) = 1
 }
 sig GetF extends Instruction {}{
   #actions = 4 and 
   #(actions & Sx_get) = 1 and 
-  #(actions & nFpq) = 1 and  
+  #(actions & nF) = 1 and  
   #(actions & nRpq) = 1 and 
   #(actions & nWp) = 1 
 }
 sig RgaF extends Instruction {}{
   #actions = 4 and 
   #(actions & Sx_rga) = 1 and 
-  #(actions & nFpq) = 1 and  
+  #(actions & nF) = 1 and  
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1
 }
@@ -184,52 +220,21 @@ sig RgaF extends Instruction {}{
 sig CasF extends Instruction {}{
   #actions = 4 and 
   #(actions & Sx_cas) = 1 and
-  #(actions & nFpq) = 1 and   
+  #(actions & nF) = 1 and   
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1
 }
 
-sig Sx_put extends Sx {}
-
-sig Sx_get extends Sx {}
-
-sig Sx_rga extends Sx {}
-
-sig Sx_cas extends Sx {}
-
-sig Reader in Action {
-	rl: one MemoryLocation,
-	rV: one Int 
-}
-
-
-sig Writer in Action {
-	wl: one MemoryLocation,
-	wV: one Int,
-	rf: set Reader
-}
-
-sig RDMAaction in Action {
-    sw : set Action}
-
-
-fact{Reader in rf[Writer]}
-fact{all w:Writer| not w in rf[w]}
-fact{all w:Writer, r:Reader| r in rf[w] implies (rl[r]=wl[w] and rV[r]=wV[w]) }
-fact{all w:nRWpq+U | rl[w]=wl[w] }
-fact{all r:Reader | host[rl[r]]=host[d[r]] }
-fact{all w:Writer | host[wl[w]]=host[d[w]] }
-
-fact {Writer=W+U+nW+nRWpq} // YM:More succinct, but for some reason removing per each sig
-fact {Reader=R+U+nR+nRWpq} //       was slower. And, removing this is slower.
-
-fact {RDMAaction=Sx+nA+poll_cq}
+// should break here and hold with sw_rules. but it holds here. Why?
+//check{all disj i1,i2:Instruction | #(actions[i1]&actions[i2])=0} for 8
+//alternative formulation 
+//run{some disj i1,i2:Instruction | #(actions[i1]&actions[i2])>0} for 8
 
 pred p { 
             //#(Action.o) > 1 and
-            //#Rcas = 0 and
-           #PutF = 1 and
+           #Put = 1 and
             #Sx_cas = 1 and
             #Thr = 2}
+
 
 run p for 8

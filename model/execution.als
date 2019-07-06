@@ -3,7 +3,6 @@ open sw_rules as swr
 
 // definition of hb and hbs
 
-
 one sig Execution {
 // actions: set Actions,
 // po: Action->Action,
@@ -17,29 +16,26 @@ one sig Execution {
 }{
   hb = ^(po+rf+sw)
 
-//mo definition
-  {all disj w1,w2:Writer | (d[w1]=d[w2]) => ((w1 in w2.^mo) or (w2 in w1.^mo))}
-  {all disj w1,w2:Writer | (w1 in w2.mo) =>  (d[w1]=d[w2])}
+//mo basic definition
+  {all disj w1,w2:Writer | (host[wl[w1]]=host[wl[w2]]) => ((w1 in w2.^mo) or (w2 in w1.^mo))}
+  {all w2:Writer, w1:w2.mo |  (host[wl[w1]]=host[wl[w2]])}
 
-//mo is acyclic //comes from hb rules?
-//{all w:Writer | not w in w.^mo}
+
+{not cyclic[hb]} // but hb;mo is cyclic, it culd be nice to generate the trace
+{not cyclic[mo]}
 
 //hbqp definition
-  {all disj a,b: Action| 
-    (b in a.hbqp)
-    iff(
-    (b in a.hb) and
-    (
+hbqp in hb
+
+  {all a: Action, b:a.hbqp| 
       (not a in nWpq)
        or
-      (a + b in nA and o[a]=o[b] and d[a]=d[b])
-    )
-   )//end iff
+      (a + b in nA and sameOandD[a,b])
   }// end hbqp defintion
 
 //mo_s definition
    mos in mo
-  {all w1,w2:Writer | w1 in w2.^mos iff (w2 in nRWpq+U+nWp)}
+  {all w2:Writer, w1: w2.^mos| w2 in nRWpq+U+nWp}
 
 //hbs definition 
   hbs=^(hbqp+mos)
@@ -49,7 +45,7 @@ one sig Execution {
 {all a:Action | not a in a.^mo.hbs}
 
 //On when a read can miss a previous write in hb_s
-{all a,b,c:Action | c in a.rf and c in b.hbs and d[a]=d[b] => not b in a.^mo}
+{all a,b,c:Action | c in a.rf and c in b.hbs and wl[a]=wl[b] => not b in a.^mo}
 
 //On when a read can miss a previous write in hb_s
 //(1/3)
@@ -98,4 +94,5 @@ pred p {
 			 #(poll_cq & Sx_put.po) > 0 and
             #Thr = 2}
 
-run p for 10
+check{not cyclic[(Execution.hb).(Execution.mo)]} for 10
+//run p for 10
