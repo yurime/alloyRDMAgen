@@ -105,39 +105,53 @@ fact{all cas:CasF | // sx->nf->nrwpq->nwp
 //-------------
 /**nic-ord-sw**/
 //-----------
-fact{not cyclic[nic_ord_sw]}// redundant?
+fact{all a:nA | not a in nic_ord_sw[a]}
+
+// predicates to define when nic_ord_sw is legal
+pred putOrRDMAatomic [na1:nA,na2:nA] {
+  let sx1=actions[instr[na1]]&Sx,
+       sx2=actions[instr[na2]]&Sx {
+           (sameOandD[na1,na2]) and//forcing same queuepair and starting thread
+           (sx2 in sx1.po_tc)  and 
+  	       (remoteMachine[na1]) and   // sx1----->nWpq
+	       (remoteMachine[na2]) and   // ↓po         ↓nic_ord_sw
+	       (not na1 in nRpq)          // sx2----->na2 
+  }//end of let 
+}
+
+pred putLocalPart [na1:nA,na2:nA]{
+  let sx1=actions[instr[na1]]&Sx,
+       sx2=actions[instr[na2]]&Sx,
+       na1r=actions[instr[na1]]&nWpq,
+       na2r=actions[instr[na2]]&nWpq      { 
+           (sameOandD[na1r,na2r]) and//forcing same queuepair and starting thread
+           (sx2 in sx1.po_tc)  and                // sx1----->nRp
+	       instr[na1]+instr[na2] in Put and  // ↓po         ↓nic_ord_sw
+	      (na2+na1 in nRp)                         // sx2----->nRp 
+  }//end of let 
+}
+
+
+pred nicFence [na1:nA,na2:nA] {
+  let sx1=actions[instr[na1]]&Sx,
+       sx2=actions[instr[na2]]&Sx {
+           (sameOandD[na1,na2]) and//forcing same queuepair and starting thread
+           (sx2 in sx1.po_tc)  and                   // sx1-->nRpq-->nWp
+	       (na2 in nF) and (na1 in nWp) and  // ↓po                  ↓nic_ord_sw
+	       (instr[sx1] in Get)                           // sx2-------------->nF
+   }                                                              
+}
 
 // (na1,na2) in nic_ord_sw definition (3 cases)
 fact{all disj na1,na2:nA |
-        let sx1=actions[instr[na1]]&Sx,
-             sx2=actions[instr[na2]]&Sx {
   (na2 in nic_ord_sw[na1]) 
-      iff
-  (
-    (sameOandD[na1,na2]) and//forcing same queuepair and starting thread
-    (sx2 in sx1.po_tc)  and 
-	(//3 cases
-	  (//Case1: put or RDMA atomic (with successor, on remote machine) 
-	    (remoteMachine[na1]) and   // sx1----->nWpq
-	    (remoteMachine[na2]) and   // ↓po         ↓nic_ord_sw
-	    (not na1 in nRpq+nF)          // sx2----->na2 
-	  )//end Case1
-	  or (//Case2:  put (local read part)// TODO: specify put explicitly
-	    some  nwpq1,nwpq2:nWpq {              // sx1----->nRp
-	      (na2 in nRp) and (na1 in nRp) and   // ↓po         ↓nic_ord_sw
-	      (instr[sx1]=instr[nwpq1])and            // sx2----->nRp 
-	      (instr[sx2]=instr[nwpq2])
-	    }
-	  )//end Case2
-	  or (//Case3: nF
-	    some nrpq:nRpq {// TODO: specify get explicitly
-	       (na2 in nF) and (na1 in nWp) and  // sx1-->nRpq-->nWp
-	       (instr[sx1]=instr[nrpq])                   // ↓po                  ↓nic_ord_sw
-	    }                                                       // sx2-------------->nF
-	  )//end case3
-	)//end  breaking into cases
- )//end iff
-}//end let sx1,sx2
+  iff
+  (  putOrRDMAatomic[na1,na2] 
+	  or 
+      putLocalPart[na1,na2]
+	  or 
+	  nicFence[na1,na2]
+  )//end iff
 }
 
 //------------
@@ -145,32 +159,6 @@ fact{all disj na1,na2:nA |
 //------------
 fact{poll_cq_sw=~co_poll_cq_sw}
 
-/*//first version --- recursive
-fact{all disj na2:nA, pcq:poll_cq | 
-(pcq in poll_cq_sw[na2])
-iff 
-  (some na1:nA,sx:Sx {
-      (na2 in instr_sw[na1] ) and
-      (na1 in instr_sw[sx] ) and
-      (pcq in sx.po_tc) and
-          (all sx2:Sx,na3,na4:nA {
-             ( (na4 in instr_sw[na3] ) and
-                (na3 in instr_sw[sx2] ) and
-                (sx in sx2.po_tc)
-              )
-              =>
-             (  some pcq2:poll_cq {
-                    pcq2 in poll_cq_sw[na4] and
-                    pcq in pcq2.po_tc and
-                    pcq2 in sx2.po_tc
-                 }          
-             )
-            }            
-          )
-  }//end of some na1,sx
-  )
-}
-*/
 
 fact{all disj na2:nA, pcq:poll_cq | 
 (pcq in poll_cq_sw[na2])
@@ -188,8 +176,6 @@ iff
 
 
 /*pred p1 { 
-            //#(Action.o) > 1 and
-            //#Rcas = 0 and
            #PutF = 1 and
             #Sx_cas = 1 and
             #Thr = 2}
@@ -197,15 +183,29 @@ iff
 run p1 for 8
 */
 
-pred p { 
-            //#(Action.o) > 1 and
-            //#Rcas = 0 and
-            #Put = 1 and
-            #PutF = 1 and
+check{not cyclic[sw]} for 10 expect 0
+
+pred getThenPutF {  // needs at least 12
+            #Get > 0 and
+            #PutF > 0 and
             #poll_cq = 2  and
+			 #(Sx & Sx_get.po_tc) > 0 and
+			 #(poll_cq & Sx_get.po_tc) > 0 and
+            #Thr = 2}
+
+pred putAfterPut { 
+            #Put >1 and
+            #poll_cq >1   and
 			 #(Sx & Sx_put.po_tc) > 0 and
 			 #(poll_cq & Sx_put.po_tc) > 0 and
             #Thr = 2}
 
-run p for 10
 
+pred putAndCas { 
+           #Put = 1 and
+            #Cas = 1 and
+            #Thr = 2}
+
+run getThenPutF for 12
+run putAfterPut for 10
+run putAndCas for 8

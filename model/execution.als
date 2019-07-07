@@ -25,6 +25,7 @@ one sig Execution {
    }
    {mo=^mo}
    {not cyclic[mo]}
+   {Init.~mo=none}
 
 //hbqp definition
   hbqp in hb
@@ -98,5 +99,5 @@ pred p {
 			 #(poll_cq & Sx_put.po_tc) > 0 and 
             #Thr = 2}
 
-check{not cyclic[(Execution.hb).^(Execution.mo)]} for 10 expect 1 //should fail
+//check{not cyclic[(Execution.hb).^(Execution.mo)]} for 10 expect 1 //should fail
 run p for 10

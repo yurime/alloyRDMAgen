@@ -36,6 +36,8 @@ sig Writer in Action {
 	rf: set Reader
 }
 
+sig Init extends W{}
+fact{Init.wl=MemoryLocation}
 //rf implies shared location and value
 fact{all w:Writer, r:rf[w] | rl[r]=wl[w] and rV[r]=wV[w]}
 
@@ -234,7 +236,6 @@ sig CasF extends Instruction {}{
 //run{some disj i1,i2:Instruction | #(actions[i1]&actions[i2])>0} for 8
 
 pred p { 
-            //#(Action.o) > 1 and
            #Put = 1 and
             #Sx_cas = 1 and
             #Thr = 2}
