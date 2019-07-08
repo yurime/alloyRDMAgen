@@ -115,7 +115,7 @@ pred putOrRDMAatomic [na1:nA,na2:nA] {
            (sx2 in sx1.po_tc)  and 
   	       (remoteMachine[na1]) and   // sx1----->nWpq
 	       (remoteMachine[na2]) and   // ↓po         ↓nic_ord_sw
-	       (not na1 in nRpq)          // sx2----->na2 
+	       (not na1 in nRpq)                // sx2----->na2 
   }//end of let 
 }
 
@@ -125,9 +125,9 @@ pred putLocalPart [na1:nA,na2:nA]{
        na1r=actions[instr[na1]]&nWpq,
        na2r=actions[instr[na2]]&nWpq      { 
            (sameOandD[na1r,na2r]) and//forcing same queuepair and starting thread
-           (sx2 in sx1.po_tc)  and                // sx1----->nRp
-	       instr[na1]+instr[na2] in Put and  // ↓po         ↓nic_ord_sw
-	      (na2+na1 in nRp)                         // sx2----->nRp 
+           (sx2 in sx1.po_tc)  and                        // sx1----->nRp
+	       instr[na1]+instr[na2] in Put+PutF and  // ↓po         ↓nic_ord_sw
+	      (na2+na1 in nRp)                                 // sx2----->nRp 
   }//end of let 
 }
 
@@ -138,7 +138,7 @@ pred nicFence [na1:nA,na2:nA] {
            (sameOandD[na1,na2]) and//forcing same queuepair and starting thread
            (sx2 in sx1.po_tc)  and                   // sx1-->nRpq-->nWp
 	       (na2 in nF) and (na1 in nWp) and  // ↓po                  ↓nic_ord_sw
-	       (instr[sx1] in Get)                           // sx2-------------->nF
+	       (instr[sx1] in Get+GetF)                 // sx2-------------->nF
    }                                                              
 }
 
