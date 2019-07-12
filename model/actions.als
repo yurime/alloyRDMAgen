@@ -38,6 +38,7 @@ sig Writer in Action {
 
 sig Init extends W{}
 fact{Init.wl=MemoryLocation}
+fact{Init.~po_tc=none}
 //rf implies shared location and value
 fact{all w:Writer, r:rf[w] | rl[r]=wl[w] and rV[r]=wV[w]}
 

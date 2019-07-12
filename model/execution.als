@@ -3,7 +3,11 @@ open sw_rules as swr
 
 // definition of hb and hbs
 
-one sig Execution {
+abstract sig Boolean {} // Ask Andrei:  why not use pred?
+one sig True, False extends Boolean {}
+
+
+abstract sig Execution {
 // actions: set Actions,
 // po: Action->Action,
 // rf: Action->Action,
@@ -12,10 +16,67 @@ one sig Execution {
  mos: Writer->set Writer,
  hb: Action-> set Action,
  hbqp: Action->set Action,
- hbs: Action->set Action
+ hbs: Action->set Action,
+ Robust: Boolean
+}{
+  {
+   (hb_cyclic  or cyclic_MoThenHbs or readAndMissPrevWriteInHbs
+   or tsoBufferCoherence1of3 or tsoBufferCoherence2of3  
+   or tsoBufferCoherence3of3  or tsoFenceViolation)
+   implies Robust=False else Robust=True
+  }
+}
+
+pred hb_cyclic[e:Execution] {
+      cyclic[e.hb]
+}
+
+pred cyclic_MoThenHbs[e:Execution] {
+      cyclic[(e.mo).(e.hbs)]
+}
+
+pred readAndMissPrevWriteInHbs [e:Execution] {
+    some a,b,c:Action | c in a.rf and c in b.(e.hbs) and wl[a]=wl[b] and b in a.(e.mo)
+}
+
+pred tsoBufferCoherence1of3 [e:Execution]{some a,b,c:Action | 
+    c in a.rf and 
+    c in b.((e.mo) & (Action->(Action-nWpq))).sw.(e.hbs) and 
+    wl[a]=wl[b] 
+    and b in a.(e.mo)
+}
+
+pred tsoBufferCoherence2of3[e:Execution] {some a,b,c:Action | 
+    c in a.rf and 
+    (some d1,e1:Action |
+        d1 in b.(e.mo) and
+        e1 in d1.((e.hbs) & (nWpq->(nRpq+nRWpq))) and
+        sameOandD[e1,d1] and
+        c in e1.(e.hbs)
+    ) and
+    wl[a]=wl[b] 
+    and b in a.(e.mo)
+}
+
+pred tsoBufferCoherence3of3 [e:Execution]{some a,b,c:Action | 
+    c in a.rf and 
+    c in b.(e.mo).(rf-po_tc).(e.hbs) and 
+    wl[a]=wl[b] 
+    and b in a.(e.mo)
+}
+
+pred tsoFenceViolation [e:Execution]{some a,b,c:Action | 
+    c in a.rf and 
+    c in b.(e.mos).(e.hbs) and 
+    wl[a]=wl[b] 
+    and b in a.(e.mo)
+}
+
+
+one sig RDMAExecution extends Execution{
+
 }{
   hb = ^(po_tc+rf+sw)
-  {not cyclic[hb]} // but hb;mo is cyclic, it culd be nice to generate the trace
 
 //mo basic definition
   {all disj w1,w2:Writer | 
@@ -46,58 +107,14 @@ one sig Execution {
 //hbs definition 
   hbs=^(hbqp+mos)
 
-/** MO Axioms **/
-// mo;hb_s irreflexive 
-{not cyclic[(mo).hbs]} // a--mo-->..--hbs-->b
-
-//On when a read can miss a previous write in hb_s
-{all a,b,c:Action | c in a.rf and c in b.hbs and wl[a]=wl[b] => not b in a.mo}
-
-//TSO buffer coherence
-//(1/3)
-{all a,b,c:Action | 
-    c in a.rf and 
-    c in b.(mo & (Action->(Action-nWpq))).sw.hbs and 
-    wl[a]=wl[b] 
-    => not b in a.mo}
-
-//TSO buffer coherence
-//(2/3) nW forced to memory due to following read or atomic
-{all a,b,c:Action | 
-    c in a.rf and 
-    (some d1,e1:Action |
-        d1 in b.mo and
-        e1 in d1.(hbs & (nWpq->(nRpq+nRWpq))) and
-        sameOandD[e1,d1] and
-        c in e1.hbs
-    ) and
-    wl[a]=wl[b] 
-    => not b in a.mo}
-
-//TSO buffer coherence
-//(3/3) external read
-{all a,b,c:Action | 
-    c in a.rf and 
-    c in b.mo.(rf-po_tc).hbs and 
-    wl[a]=wl[b] 
-    => not b in a.mo}
-
-//TSO fence
-{all a,b,c:Action | 
-    c in a.rf and 
-    c in b.mos.hbs and 
-    wl[a]=wl[b] 
-    => not b in a.mo}
-}
+}// end of sig execution
 
 pred p { 
             //#(Action.o) > 1 and
             //#Rcas = 0 and
-            #Put = 2 and
-             #poll_cq = 2  and
-			 #(Sx & Sx.po_tc) > 0 and
-			 #(poll_cq & Sx_put.po_tc) > 0 and 
-            #Thr = 2}
+            
+            RDMAExecution.Robust=True and
+            putAfterPut}
 
-check{not cyclic[(Execution.hb).^(Execution.mo)]} for 10 expect 1 //should fail so expect 1
-run putAfterPut for 10
+//check{RDMAExecution.Robust => not cyclic[(Execution.hb).^(Execution.mo)]} for 10 expect 1 //should fail so expect 1
+run p for 10

@@ -1,4 +1,4 @@
-open actions as a
+open lighter_actions as a
 
 /* construction of sw */
 
@@ -168,7 +168,7 @@ iff
       (na1 in instr_sw[sx] ) and
       (pcq in sx.po_tc) and
           (// num act submitted = num actions acknowledged
-           #(sx.^copo & Sx) = #(pcq.^copo & poll_cq)
+           #(sx.^~po_tc & Sx) = #(pcq.^~po_tc & poll_cq)
            )
   }//end of some na1,sx
   )
