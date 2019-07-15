@@ -59,21 +59,17 @@ sig RDMAaction in Action {
 
 abstract sig LocalCPUaction extends Action{
 	/* program order */
-	po_tc : set LocalCPUaction,
-    po: lone LocalCPUaction, // for displaying po.
-	copo : set LocalCPUaction
+	po_tc : set LocalCPUaction
 }
 fact {po_tc=^po_tc}
-fact {po_tc=~copo}
 fact{not cyclic[po_tc]}
-fact{all a:Action, b:a.po_tc | b in a.po iff #(a.po_tc - b.po_tc)=1} // for displaying po. 
 fact {all a: LocalCPUaction| o[a] = d[a]}
 fact {all disj a,b: LocalCPUaction| 
                                       (o[a] = o[b])
                                       iff
                                       (
                                         (a in b.po_tc) or
-                                        (a in b.copo) 
+                                        (a in b.~po_tc) 
                                       )
 }
 
@@ -109,13 +105,16 @@ fact {all a:U| not(a in RDMAaction)}
 /*NIC action*/
 abstract sig nA extends Action{
 	instr: one Instruction,
-    instr_sw: lone nA, 
+    instr_sw: lone nA,
+    co_instr_sw: lone nA+Sx,  
     nic_ord_sw: set nA,
     poll_cq_sw: lone poll_cq 
 }
 fact {all a:nA| (a in RDMAaction)}
 
-//fact{all na:nA | not na in na.^nic_ord_sw}
+fact{all a:nA, b:nA | (a in b.instr_sw) iff (b in a.co_instr_sw)}
+fact{all a:nA, b:Sx | (a in b.instr_sw) iff (b in a.co_instr_sw)}
+
 //fact {nA in sw[nA] + sw[Sx] }//YM: all nA are connected by some sw (at the very least instr_sw) (is this forall exists?)
 //fact {poll_cq in sw[nA] } // YM: every poll_cq is connected by sw from some relation.
 //fact {all na:nA | not na in sw[na]}
@@ -153,7 +152,7 @@ fact { all a: nRWpq| not host[o[a]] = host[d[a]]}
 /*RDMA Fence*/
 sig nF extends nA {}
 fact {all f:nF| not(f in Writer) and not (f in Reader)}
-fact {all a: nF| o[a] = d[a]}
+fact { all a: nF| o[a] = d[a]}
 
 /*poll_cq*/
 sig poll_cq extends LocalCPUaction {

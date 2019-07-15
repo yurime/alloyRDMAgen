@@ -11,7 +11,6 @@ fact{all a:Sx |
 fact{all a:nA |
 	a.sw = a.nic_ord_sw+a.poll_cq_sw+a.instr_sw
 }
-
 //-----------
 /**instr-sw**/
 //-----------
