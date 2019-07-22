@@ -1,5 +1,5 @@
 open util/integer
-
+// removing one to one po, used for display, and copo (which doesn't seem to help?)
 /* Machine with one or more Threads */
 sig Node {}
 

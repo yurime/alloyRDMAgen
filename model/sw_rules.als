@@ -1,4 +1,4 @@
-open lighter_actions as a
+open actions as a
 
 /* construction of sw */
 

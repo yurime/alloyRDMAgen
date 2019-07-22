@@ -9,10 +9,6 @@ open execution as e
 one sig nA1Pivot in nWpq{} 
 one sig nA2Pivot in nWpq{}
 
-
-
-
-
 /* Hypothesis of the nic-ord-sw put or RDMAatomic rule on the pivots */
 fact {putOrRDMAatomic[nA1Pivot,nA2Pivot]}
 
@@ -35,7 +31,6 @@ fact{all a:nA|
 }
 
 /* Execution_prime.hbs is acyclic */
-fact {RDMAExecution_prime.Robust=True} 
 
 
 /* Execution.hbs is cyclic, and the reader pivot is involved in the cycle */
@@ -45,6 +40,8 @@ fact {RDMAExecution_prime.Robust=True}
 
 /* Witness */
 one sig Witness in Reader {}
+/* Witness2 */
+one sig Witness2 in Reader {}
 ------------------------------------------------------------------------
 /** Definition of Execution_prime hb and hbs**/
 ------------------------------------------------------------------------
@@ -52,7 +49,6 @@ one sig RDMAExecution_prime extends Execution{ }{
   hb = ^(po_tc+rf+sw_prime)
 
 //mo basic definition
-
 
 //hbqp definition
   hbqp in hb
