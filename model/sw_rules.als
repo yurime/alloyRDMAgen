@@ -173,7 +173,7 @@ iff
   )
 }
 
-
+fact {all nr:(nA&Reader),nw:(nA&Writer) | nw in nr.instr_sw => wV[nw]=rV[nr]}
 /*pred p1 { 
            #PutF = 1 and
             #Sx_cas = 1 and
@@ -205,6 +205,6 @@ pred putAndCas {
             #Cas = 1 and
             #Thr = 2}
 
-run getThenPutF for 12
-run putAfterPut for 10
+//run getThenPutF for 12
+//run putAfterPut for 10
 run putAndCas for 8

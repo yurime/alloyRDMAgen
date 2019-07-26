@@ -1,5 +1,4 @@
-open base_sw_rules as bsr
-open execution as e
+open base_sw_rules as b
 //-------------
 /**nic-ord-sw**/
 //-----------
@@ -41,7 +40,7 @@ fact{all a:nA|
 /* Witness */
 one sig Witness in Reader {}
 /* Witness2 */
-one sig Witness2 in Reader {}
+//one sig Witness2 in Reader {}
 ------------------------------------------------------------------------
 /** Definition of Execution_prime hb and hbs**/
 ------------------------------------------------------------------------

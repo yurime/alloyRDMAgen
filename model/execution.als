@@ -1,5 +1,4 @@
-open actions as a
-open sw_rules as swr
+open sw_rules as sw
 
 // definition of hb and hbs
 
@@ -13,6 +12,7 @@ abstract sig Execution {
 // rf: Action->Action,
 // sw: Action->Action,
  mo: Writer->set Writer,
+mo_next: Writer->lone Writer,
  mos: Writer->set Writer,
  hb: Action-> set Action,
  hbqp: Action->set Action,
@@ -25,7 +25,10 @@ abstract sig Execution {
    or tsoBufferCoherence3of3  or tsoFenceViolation)
    implies Robust=False else Robust=True
   }
+{all w1,w2:Writer | w1 in w2.mo_next <=> (w1 in w2.mo and #(w2.mo-w1.mo)=1)}
 }
+
+
 
 pred hb_cyclic[e:Execution] {
       cyclic[e.hb]
@@ -86,7 +89,6 @@ one sig RDMAExecution extends Execution{
    }
    {mo=^mo}
    {not cyclic[mo]}
-   {Init.~mo=none}
 
 //hbqp definition
   hbqp in hb

@@ -37,13 +37,21 @@ sig Writer in Action {
 }
 
 sig Init extends W{}
+
+// All memory locations must be initialized
 fact{Init.wl=MemoryLocation}
-fact{Init.~po_tc=none}
+
+// Init or a sequence of it is the first instruction
+fact{Init.~po_tc in Init}
+
+// one Init per one location
+fact  {all disj i1,i2:Init| not wl[i1]=wl[i2]}
+
 //rf implies shared location and value
 fact{all w:Writer, r:rf[w] | rl[r]=wl[w] and rV[r]=wV[w]}
 
 // atomic actions non recursive and atomic to one location
-fact{not cyclic[rf]}
+fact{all a:Action | not a.rf=a}
 fact{all w:Writer&Reader | rl[w]=wl[w] }
 
 fact{~rf=corf}
@@ -66,7 +74,7 @@ abstract sig LocalCPUaction extends Action{
 fact {po_tc=^po_tc}
 fact {po_tc=~copo}
 fact{not cyclic[po_tc]}
-fact{all a:Action, b:a.po_tc | b in a.po iff #(a.po_tc - b.po_tc)=1} // for displaying po. 
+fact{all a,b:Action| b in a.po iff ((b in a.po_tc) and #(a.po_tc - b.po_tc)=1)} // for displaying po. 
 fact {all a: LocalCPUaction| o[a] = d[a]}
 fact {all disj a,b: LocalCPUaction| 
                                       (o[a] = o[b])
@@ -231,8 +239,8 @@ sig CasF extends Instruction {}{
   #(actions & nWp) = 1
 }
 
-// should break here and hold with sw_rules. but it holds here. Why?
-//check{all disj i1,i2:Instruction | #(actions[i1]&actions[i2])=0} for 8
+// holds here because of explicit def of actions, one shared -> all shared -> equal
+//check{all disj i1,i2:Instruction | #(actions[i1]&actions[i2])=0} for 8 expect 0
 //alternative formulation 
 //run{some disj i1,i2:Instruction | #(actions[i1]&actions[i2])>0} for 8
 
