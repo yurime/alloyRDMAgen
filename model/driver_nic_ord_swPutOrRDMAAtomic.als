@@ -14,14 +14,22 @@ fact {Thr = o[Action]}
 // try to avoid Initialization threads
 fact{all i:Init |host[o[i]] in host[o[Action-Init]] => #i.po_tc>0}
 
-// try to minimize the number of values
-fact{Writer.wV in {1+2}}
+
+/* There should be at least one local read from each writer (except initial values)*/
+fact {Writer - Init in corf[R]}
 
 // each write has an effect (costly in instance finding)
 //fact{all w1,w2:Writer | w1 = w2.(RDMAExecution.mo_next)  => not (wV[w1]=wV[w2])}
 
-//let us be positive
-fact{all w:Writer | wV[w]>0}
+
+// /* Values written by local writes are increasing with CO */
+// fact { all disj w1, w2: Write| (co[w1, w2, mlast]) implies wV[w2] > wV[w1]}
+
+/* Generate distinct write values for initial values and local writes */
+fact { all disj w1, w2: W+Init| not (wV[w1] = wV[w2])}
+
+/* Values written by local writes are between [0 .. #Write]*/
+fact { all w: Writer| 0 <=  wV[w] and wV[w] < #Writer}
 
 
 /** Specific test requirement or optimizations**/
@@ -72,6 +80,10 @@ fact { no Dummy }
 
 fact{RDMAExecution_prime.Robust=True}
 
+
+pred oneThread { #Thr = 1 }
+pred twoThreads { #Thr = 2 }
+
 // sanity
 //check {RDMAExecution.Robust=False} expect 0
 
@@ -84,4 +96,4 @@ pred show {
         }
 
 
-run {show} for 11
+run {show} for 12

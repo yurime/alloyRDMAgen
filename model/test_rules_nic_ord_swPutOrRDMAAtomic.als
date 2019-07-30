@@ -38,7 +38,8 @@ fact{all a:nA|
 //}
 
 /* Witness */
-one sig Witness in Reader {}
+one sig Witness in Reader {
+}
 /* Witness2 */
 //one sig Witness2 in Reader {}
 ------------------------------------------------------------------------
@@ -48,6 +49,17 @@ one sig RDMAExecution_prime extends Execution{ }{
   hb = ^(po_tc+rf+sw_prime)
 
 //mo basic definition
+  {all disj w1,w2:Writer | 
+                 (host[wl[w1]]=host[wl[w2]]) 
+                 <=> 
+                ((w1 in w2.mo) or (w2 in w1.mo))
+   }
+   {mo=^mo}
+   {not cyclic[mo]}
+
+//mo_s definition
+   mos in mo
+  {all w1,w2:Writer| w2 in w1.mos iff w1 in nRWpq+U+nWp}
 
 //hbqp definition
   hbqp in hb
@@ -66,7 +78,4 @@ one sig RDMAExecution_prime extends Execution{ }{
   hbs=^(hbqp+mos)
 }// end of sig RDMAexecution
 
-fact {RDMAExecution_prime.mo =RDMAExecution.mo}
-//mo_s definition
-fact  {RDMAExecution_prime.mos=RDMAExecution.mos}
 

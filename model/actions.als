@@ -8,10 +8,17 @@ sig Thr {
 	host: one Node // host node
 }
 
-/* Variables */
+/* Shared Variables */
 sig MemoryLocation {
   host: one Node
 }
+
+///* Local Variables*/
+//sig Register{
+//  o: one Thr
+//}
+
+//fact { all r: Register| o[r] = o[~reg[r]] }
 
 abstract sig Action {
 
@@ -100,10 +107,13 @@ fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
 fact {all sx: Sx| (sx in RDMAaction)}
 
 /*CPU read*/
-sig R extends LocalCPUaction{}
+sig R extends LocalCPUaction{
+   // reg : one Register
+}
 fact {all r:R| r in Reader and not(r in Writer)}
 fact {all a:R| not(a in RDMAaction)}
-
+//fact {all disj a, b: R|
+//				not (reg[a] = reg[b])}
 /*CPU write*/
 sig W extends LocalCPUaction{}
 fact {all w:W| w in Writer and not(w in Reader)}
