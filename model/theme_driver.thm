@@ -1,0 +1,106 @@
+<?xml version="1.0"?>
+<alloy>
+
+<view>
+
+<projection> <type name="t/b/e/Execution"/> </projection>
+
+<defaultnode/>
+
+<defaultedge/>
+
+<node>
+   <type name="Dummy"/>
+   <type name="Int"/>
+   <type name="String"/>
+   <type name="univ"/>
+   <type name="seq/Int"/>
+   <type name="t/RDMAExecution_prime"/>
+   <type name="t/b/e/Boolean"/>
+   <type name="t/b/e/Execution"/>
+   <type name="t/b/e/False"/>
+   <type name="t/b/e/RDMAExecution"/>
+   <type name="t/b/e/True"/>
+   <type name="t/b/e/sw/a/Action"/>
+   <type name="t/b/e/sw/a/Cas"/>
+   <type name="t/b/e/sw/a/CasF"/>
+   <type name="t/b/e/sw/a/Get"/>
+   <type name="t/b/e/sw/a/GetF"/>
+   <type name="t/b/e/sw/a/Init"/>
+   <type name="t/b/e/sw/a/Instruction"/>
+   <type name="t/b/e/sw/a/LocalCPUaction"/>
+   <type name="t/b/e/sw/a/MemoryLocation"/>
+   <type name="t/b/e/sw/a/nA"/>
+   <type name="t/b/e/sw/a/nF"/>
+   <type name="t/b/e/sw/a/Node"/>
+   <type name="t/b/e/sw/a/nR"/>
+   <type name="t/b/e/sw/a/nRp"/>
+   <type name="t/b/e/sw/a/nRpq"/>
+   <type name="t/b/e/sw/a/nRWpq"/>
+   <type name="t/b/e/sw/a/nW"/>
+   <type name="t/b/e/sw/a/nWp"/>
+   <type name="t/b/e/sw/a/nWpq"/>
+   <type name="t/b/e/sw/a/poll_cq"/>
+   <type name="t/b/e/sw/a/Put"/>
+   <type name="t/b/e/sw/a/PutF"/>
+   <type name="t/b/e/sw/a/R"/>
+   <type name="t/b/e/sw/a/Rga"/>
+   <type name="t/b/e/sw/a/RgaF"/>
+   <type name="t/b/e/sw/a/Sx"/>
+   <type name="t/b/e/sw/a/Sx_cas"/>
+   <type name="t/b/e/sw/a/Sx_get"/>
+   <type name="t/b/e/sw/a/Sx_put"/>
+   <type name="t/b/e/sw/a/Sx_rga"/>
+   <type name="t/b/e/sw/a/Thr"/>
+   <type name="t/b/e/sw/a/U"/>
+   <type name="t/b/e/sw/a/W"/>
+   <set name="Robust" type="t/b/e/Boolean"/>
+   <set name="t/nA_prime" type="t/b/e/sw/a/nA"/>
+   <set name="t/RDMAaction_prime" type="t/b/e/sw/a/Action"/>
+   <set name="t/b/e/sw/a/RDMAaction" type="t/b/e/sw/a/Action"/>
+   <set name="t/b/e/sw/a/Reader" type="t/b/e/sw/a/Action"/>
+   <set name="t/b/e/sw/a/Writer" type="t/b/e/sw/a/Action"/>
+</node>
+
+<node color="Blue">
+   <set name="t/Witness" type="t/b/e/sw/a/Action"/>
+</node>
+
+<node color="Green">
+   <set name="t/nA1Pivot" type="t/b/e/sw/a/nWpq"/>
+</node>
+
+<node color="Red">
+   <set name="t/nA2Pivot" type="t/b/e/sw/a/nWpq"/>
+</node>
+
+<edge visible="no">
+   <relation name="actions"> <type name="t/b/e/sw/a/Instruction"/> <type name="t/b/e/sw/a/Action"/> </relation>
+   <relation name="co_poll_cq_sw"> <type name="t/b/e/sw/a/poll_cq"/> <type name="t/b/e/sw/a/nA"/> </relation>
+   <relation name="copo"> <type name="t/b/e/sw/a/LocalCPUaction"/> <type name="t/b/e/sw/a/LocalCPUaction"/> </relation>
+   <relation name="corf"> <type name="t/b/e/sw/a/Action"/> <type name="t/b/e/sw/a/Action"/> </relation>
+   <relation name="hb"> <type name="t/b/e/sw/a/Action"/> <type name="t/b/e/sw/a/Action"/> </relation>
+   <relation name="hbqp"> <type name="t/b/e/sw/a/Action"/> <type name="t/b/e/sw/a/Action"/> </relation>
+   <relation name="hbs"> <type name="t/b/e/sw/a/Action"/> <type name="t/b/e/sw/a/Action"/> </relation>
+   <relation name="mo"> <type name="t/b/e/sw/a/Action"/> <type name="t/b/e/sw/a/Action"/> </relation>
+   <relation name="mos"> <type name="t/b/e/sw/a/Action"/> <type name="t/b/e/sw/a/Action"/> </relation>
+   <relation name="po_tc"> <type name="t/b/e/sw/a/LocalCPUaction"/> <type name="t/b/e/sw/a/LocalCPUaction"/> </relation>
+   <relation name="sw"> <type name="t/b/e/sw/a/Action"/> <type name="t/b/e/sw/a/Action"/> </relation>
+</edge>
+
+<edge visible="no" attribute="yes">
+   <relation name="d"> <type name="t/b/e/sw/a/Action"/> <type name="t/b/e/sw/a/Thr"/> </relation>
+   <relation name="host"> <type name="t/b/e/sw/a/MemoryLocation"/> <type name="t/b/e/sw/a/Node"/> </relation>
+   <relation name="host"> <type name="t/b/e/sw/a/Thr"/> <type name="t/b/e/sw/a/Node"/> </relation>
+   <relation name="instr"> <type name="t/b/e/sw/a/nA"/> <type name="t/b/e/sw/a/Instruction"/> </relation>
+   <relation name="instr"> <type name="t/b/e/sw/a/Sx"/> <type name="t/b/e/sw/a/Instruction"/> </relation>
+   <relation name="o"> <type name="t/b/e/sw/a/Action"/> <type name="t/b/e/sw/a/Thr"/> </relation>
+   <relation name="rl"> <type name="t/b/e/sw/a/Action"/> <type name="t/b/e/sw/a/MemoryLocation"/> </relation>
+   <relation name="rV"> <type name="t/b/e/sw/a/Action"/> <type name="Int"/> </relation>
+   <relation name="wl"> <type name="t/b/e/sw/a/Action"/> <type name="t/b/e/sw/a/MemoryLocation"/> </relation>
+   <relation name="wV"> <type name="t/b/e/sw/a/Action"/> <type name="Int"/> </relation>
+</edge>
+
+</view>
+
+</alloy>
