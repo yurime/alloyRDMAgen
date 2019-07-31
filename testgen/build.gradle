@@ -1,0 +1,28 @@
+apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+    flatDir {
+        dirs 'lib'
+    }
+}
+
+dependencies {
+    compile name: 'alloy4.2'
+    testCompile 'junit:junit:[4,)'
+}
+
+test {
+    testLogging {
+        // Show that tests are run in the command-line output
+        events 'started', 'passed'
+    }
+}
+
+ext.mainClass = 'ch.ethz.srl.Main'
+ext.cliargs = ['--limit', '100', '--count', '../alloy/generate_litmus.als']
+task run(type:JavaExec) {
+    main = mainClass
+    classpath = sourceSets.main.runtimeClasspath
+    args = cliargs
+}
