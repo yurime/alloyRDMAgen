@@ -6,17 +6,14 @@ import java.util.List;
 class TGThread {
     String label;
     int id;
-    //List<TGMemoryLocation> memoryLocations;
     List<TGRegister> registers;
     List<TGAction> actions;
 
     public TGThread(A4CodeGen.State s,    		        
                     String label,
-                    //List<TGMemoryLocation> memoryLocations,
                     List<TGRegister> registers,
                     List<TGAction> actions) {
         this.label = label;
-        //this.memoryLocations = memoryLocations;
         this.registers = registers;
         this.actions = actions;
 
