@@ -38,18 +38,18 @@ public class POTest {
 	    TGAction tl = g.getTails().get(0);
 
 	    // check the manual hd and tl calc
-	    assert(hd.getLabel().startsWith("InitialValue"));
-	    assert(tl.getLabel().startsWith("AWrite"));
+	    assert(hd.getLabel().startsWith("Init"));
+	    assert(tl.getLabel().startsWith("W"));
 
 	    // and also that returned from the pto
 	    PseudoTopologicalOrderer<TGAction> pto = new PseudoTopologicalOrderer<>();
 	    List<TGAction> l = pto.newList(res.po.get(t), false);
-	    assert(l.get(0).getLabel().startsWith("InitialValue"));
-	    assert(l.get(1).getLabel().startsWith("AWrite"));
+	    assert(l.get(0).getLabel().startsWith("Init"));
+	    assert(l.get(1).getLabel().startsWith("W"));
 	}
     }
 
-
+/*
     @Test public void oneThreadThreeActions() throws Err {
 	URL url = this.getClass().getResource("/po3.als");
 	A4CodeGen res = Driver.getFirstResult(new File(url.getFile()));
@@ -76,4 +76,5 @@ public class POTest {
 	}
 	assertTrue("longestThread at least 3", longestThread >= 3);
     }
+    */
 }

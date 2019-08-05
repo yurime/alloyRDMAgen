@@ -359,7 +359,7 @@ public class A4CodeGen {
     public String MEMORY_LOCATION_LABEL() { return m("MemoryLocation"); }
     public String REGISTER_LABEL() { return m("Register"); }
     public String HOST_FIELD_LABEL() { return "host"; }
-    public String INITIAL_VALUE_LABEL() { return m("InitialValue"); }
+    public String INITIAL_VALUE_LABEL() { return m("Init"); }
     public String WRITER_LABEL() { return m("Writer"); }
     public String WL_FIELD_LABEL() { return "wl"; }
     public String WV_FIELD_LABEL() { return "wV"; }

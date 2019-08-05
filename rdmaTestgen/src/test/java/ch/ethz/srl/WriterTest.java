@@ -42,7 +42,7 @@ public class WriterTest {
 	TGThread t0 = res.labelToThreads.get("Thr$0");
 	TGThread t1 = res.labelToThreads.get("Thr$1");
 
-	TGWriter w0 = res.labelToWriters.get("InitialValue$0");
+	TGWriter w0 = res.labelToWriters.get("Init$0");
 	assert(t0.actions.contains(w0) || t1.actions.contains(w0));
     }
 }
