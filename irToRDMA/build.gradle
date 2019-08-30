@@ -1,0 +1,26 @@
+apply plugin: 'antlr'
+apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+    flatDir {
+        dirs 'lib'
+    }
+}
+
+dependencies {
+    antlr "org.antlr:antlr4:4.5"
+    compile name: 'alloy4.2'
+}
+
+// I wish I had a better way of copying the antlr4 runtime.
+task copyDepJars(type: Copy) {
+  from configurations.compile
+  into 'build/libs'
+}
+
+generateGrammarSource {
+    arguments = ["-visitor"]
+}
+
+
