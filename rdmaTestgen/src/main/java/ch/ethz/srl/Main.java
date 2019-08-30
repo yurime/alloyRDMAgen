@@ -135,7 +135,7 @@ public class Main {
                 }
 
                 if (solutionCount > firstSolution) {
-                    A4CodeGen a4cg = new A4CodeGen(ans, "c/b/a/");
+                    A4CodeGen a4cg = new A4CodeGen(ans, "this/");
                     PrintWriter pw = null;
                     try {
                         if (outputDir == null)

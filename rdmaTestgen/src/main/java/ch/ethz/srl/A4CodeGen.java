@@ -328,14 +328,14 @@ class TGRemoteGetAccumulate extends TGStatement {
     }
 }
 
-class TGFlush extends TGActionImpl {
-    public TGFlush(A4CodeGen.State s, String label) {
+class TGPollCQ extends TGActionImpl {
+    public TGPollCQ(A4CodeGen.State s, String label) {
         super(s, label);
     }
 
     @Override
-    public String toString() {
-        return String.format("flush (%d)", getD().id);
+    public String toString() {// poll_CQ T1
+        return String.format("poll_cq (%d)", getD().id);
     }
 }
 
@@ -391,7 +391,7 @@ public class A4CodeGen {
     Map<String, TGWriter> labelToWriters = new HashMap<>();
     Map<String, TGReader> labelToReaders = new HashMap<>();
     Map<String, TGSX> labelToSxs = new HashMap<>();
-    Map<String, TGFlush> LabelToPollCQ = new HashMap<>();
+    Map<String, TGPollCQ> LabelToPollCQ = new HashMap<>();
     Map<String, TGThread> labelToThreads = new HashMap<>();
     Map<String, TGNode> labelToNodes = new HashMap<>();
     Map<TGThread, TGActionGraph> po = new HashMap<>();
@@ -667,7 +667,7 @@ public class A4CodeGen {
                 A4TupleSet pollcqs = solution.eval(s);
                 for (A4Tuple pollcq : pollcqs) {
                     String label = pollcq.atom(0);
-                    TGFlush pcq = new TGFlush(state, label);
+                    TGPollCQ pcq = new TGPollCQ(state, label);
                     LabelToPollCQ.put(label, pcq);
                     labelToActions.put(label, pcq);
                 }

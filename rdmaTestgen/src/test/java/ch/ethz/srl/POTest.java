@@ -49,7 +49,7 @@ public class POTest {
 	}
     }
 
-/*
+
     @Test public void oneThreadThreeActions() throws Err {
 	URL url = this.getClass().getResource("/po3.als");
 	A4CodeGen res = Driver.getFirstResult(new File(url.getFile()));
@@ -58,23 +58,23 @@ public class POTest {
 	int longestThread = 0;
 	for (TGThread t : res.labelToThreads.values()) {
 	    if (t.actions.size() > longestThread)
-		longestThread = t.actions.size();
+	    	longestThread = t.actions.size();
 
 	    TGActionGraph g = res.po.get(t);
 	    assertTrue(">= 1 head", g.getHeads().size() >= 1);
 	    assertTrue(">= 1 tail", g.getTails().size() >= 1);
 
-	    assert(g.getHeads().stream().anyMatch((hd) -> hd.getLabel().startsWith("InitialValue")));
-	    assert(g.getTails().stream().allMatch((tl) -> tl.getLabel().startsWith("AWrite")));
+	    assert(g.getHeads().stream().anyMatch((hd) -> hd.getLabel().startsWith("Init")));
+	    assert(g.getTails().stream().allMatch((tl) -> tl.getLabel().startsWith("W")));
 
 	    // and also that returned from the pto
 	    PseudoTopologicalOrderer<TGAction> pto = new PseudoTopologicalOrderer<>();
 	    List<TGAction> l = pto.newList(res.po.get(t), false);
-	    assertTrue(l.get(0).getLabel().startsWith("InitialValue"));
+	    assertTrue(l.get(0).getLabel().startsWith("Init"));
 	    for (int i = 1; i < l.size(); i++)
-		assertTrue(l.get(i).getLabel().startsWith("AWrite"));
+	    	assertTrue(l.get(i).getLabel().startsWith("W"));
 	}
 	assertTrue("longestThread at least 3", longestThread >= 3);
-    }
-    */
+   }
+
 }

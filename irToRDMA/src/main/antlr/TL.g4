@@ -32,6 +32,7 @@ statement
  | cas ';'
  | load ';'
  | store ';'
+ | pollcq ';'
  | assumption ';'
  | assertion ';'
  | ifStatement ';'
@@ -45,6 +46,10 @@ store
  : Identifier '=' rhs
  ;
 
+pollcq
+ : PollCQ '(' Number ')'
+ ;
+ 
 put
  : Put '(' Identifier '^' 'T' Number ',' Identifier ')'
  ;
@@ -155,6 +160,7 @@ Put      : 'put' ;
 Get      : 'get' ;
 Rga      : 'rga' ;
 Cas      : 'cas' ;
+PollCQ   : 'poll_cq';
 Shared   : 'shared' ;
 Local    : 'local' ;
 Node  : 'node';
