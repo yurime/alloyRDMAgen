@@ -1,0 +1,15 @@
+process Thr1
+shared Y1 = 2, Y2 = 1;
+
+put(X, Thr0, Y2);
+put(X, Thr0, Y1);
+
+
+process Thr0
+shared X = 2;
+local c1,c2;
+
+load c1 = X;
+load c2 = X;
+assert (!(c1 == 2 && c2 == 1));
+// ---
