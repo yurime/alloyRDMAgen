@@ -12,6 +12,11 @@ interface TGAction {
     public void setD(TGThread d);
 }
 
+interface TGRDMAaction extends TGAction{
+    public List<TGRDMAaction> getSwPreds();
+    public List<TGRDMAaction> getSwSuccs();
+}
+
 class TGActionImpl implements TGAction {
     String label;
     List<TGAction> preds;// TODO: makes sense for all actions connected by po. not here. maybe sw+po? or is it hb?
@@ -38,4 +43,23 @@ class TGActionImpl implements TGAction {
     public String getLabel() { return label; }
     @Override
     public String toString() { return label; }
+}
+
+class TGRDMAactionImpl extends TGActionImpl implements TGRDMAaction {
+    List<TGRDMAaction> swpreds;
+    List<TGRDMAaction> swsuccs;
+
+    public TGRDMAactionImpl(A4CodeGen.State s,
+                        String label) 
+    {
+    	super(s,label);
+        this.swpreds = new LinkedList<>();
+        this.swsuccs = new LinkedList<>();
+    }
+
+    @Override
+    public List<TGRDMAaction> getSwPreds() { return swpreds; }
+    @Override
+    public List<TGRDMAaction> getSwSuccs() { return swsuccs; }
+
 }

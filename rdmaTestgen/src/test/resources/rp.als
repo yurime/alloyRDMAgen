@@ -40,6 +40,11 @@ sig Writer in Action {
 
 fact{~rf=corf}
 
+
+sig RDMAaction in Action {
+    sw : set Action
+}
+
 /* RDMA instructions and the actions that compose them*/
 abstract sig Instruction {
 	actions: set Action
@@ -56,11 +61,7 @@ fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
 fact {all sx: Sx| (sx in RDMAaction)}
 
 
-sig Sx_cas extends Sx {}
-
-sig RDMAaction in Action {
-    sw : set Action
-}
+sig Sx_put extends Sx {}
 
 fact { all l: LocalCPUaction| o[l] = d[l]}
 
@@ -73,19 +74,22 @@ abstract sig nA extends Action{
 fact {all a:nA| (a in RDMAaction)}
 
 
+/*NIC Read*/
+abstract sig nR extends nA{}
+fact {all r:nR| r in Reader and not(r in Writer)}
+
+
 /*NIC Write*/
 abstract sig nW extends nA{}
 fact {all w:nW| w in Writer and not(w in Reader)}
 
-/*NIC read-write*/
-sig nRWpq extends nA{}
-fact {all rw:nRWpq| rw in Writer and rw in Reader}
-fact { all a: nRWpq| not host[o[a]] = host[d[a]]}
+/*NIC local read*/
+sig nRp extends nR{}
+fact {all a: nRp| o[a] = d[a]}
 
-
-/*NIC local write*/
-sig nWp extends nW{}
-fact { all a: nWp| o[a] = d[a]}
+/*NIC remote write*/
+sig nWpq extends nW{}
+fact { all a: nWpq| not host[o[a]] = host[d[a]]}
 
 
 sig Reader in Action {
@@ -95,42 +99,31 @@ sig Reader in Action {
 }
 
 /* =============== */
-/* Remote Cas Instruction */
+/* Remote Put statement */
 /* =============== */
-sig Cas extends Instruction {}{
+
+
+sig Put extends Instruction {}{ 
   #actions = 3 and 
-  #(actions & Sx_cas) = 1 and 
-  #(actions & nRWpq) = 1 and 
-  #(actions & nWp) = 1 and 
-  (let nrwpq=actions & nRWpq,
-      nwp=actions & nWp{
-   rV[nrwpq] = wV[nwp]
+  #(actions & Sx_put) = 1 and 
+  #(actions & nRp) = 1 and 
+  #(actions & nWpq) = 1    and 
+  (let nrp=actions & nRp,
+      nwpq=actions & nWpq{
+       rV[nrp] = wV[nwpq]
    })
 }
 
-
-/* construction of sw */
-
-//defined per instruction in action file
-
-fact{all a:Sx |
-	a.sw = a.instr_sw
-}
-
-fact{all a:nA |
-	a.sw = a.nic_ord_sw+a.instr_sw//+a.poll_cq_sw
-}
 //-----------
 /**instr-sw**/
 //-----------
-
-fact{all cas:Cas | // sx->nrwpq->nwp
-  let sx=actions[cas] & Sx_cas, 
-      nrwpq=actions[cas] & nRWpq,
-      nwp=actions[cas] & nWp{
-          instr_sw[sx] = nrwpq and
-          instr_sw[nrwpq] = nwp and
-		   #(instr_sw[nwp])=0
+fact{all put:Put | // sx->nrp->nwpq
+  let sx=actions[put] & Sx_put, 
+      nrp=actions[put] & nRp,
+      nwpq=actions[put] & nWpq{
+          instr_sw[sx] = nrp and
+          instr_sw[nrp] = nwpq and
+		   #(instr_sw[nwpq])=0
      }
 }
 
@@ -151,10 +144,18 @@ fact{Init.~po_tc in Init}
 fact  {all disj i1,i2:Init| not wl[i1]=wl[i2]}
 
 
+fact{all a:Sx |
+	a.sw = a.instr_sw
+}
+
+fact{all a:nA |
+	a.sw = a.nic_ord_sw+a.instr_sw//+a.poll_cq_sw
+}
 
 // assign some initial value
 fact { all w:Writer | w.wV = 4 }
 /*
+
 // there is at least one write to each memory location
 fact { all ml:MemoryLocation | some w:Writer | w.wl = ml }
 // ... and one initial value
@@ -176,8 +177,8 @@ fact { all x,y : Action | x in po[y] => x.o = y.o }
 // not all actions belong to same thread
 fact { some x, y : Action | not (x.o = y.o) }
 
-fact { #MemoryLocation = 2 and #Thr = 2 and #Init = 2 and #Cas = 1}
+fact { #MemoryLocation = 2 and #Thr = 2 and #Init >= 2 and #Put = 1}
 
 pred show {}
 
-run show for 8
+run show for 6

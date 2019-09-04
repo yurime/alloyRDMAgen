@@ -110,6 +110,40 @@ class TGWriterImpl extends TGActionImpl implements TGWriter {
     public boolean isLocalWrite() { return isLocalWrite; }
 }
 
+class TGRDMAWriterImpl extends TGWriterImpl implements TGRDMAaction {
+    List<TGRDMAaction> swpreds;
+    List<TGRDMAaction> swsuccs;
+
+    public TGRDMAWriterImpl(A4CodeGen.State s,
+            String label, TGMemoryLocation wl, int wV)  {
+    	super(s,label,wl,wV);
+        this.swpreds = new LinkedList<>();
+        this.swsuccs = new LinkedList<>();
+    }
+
+    @Override
+    public List<TGRDMAaction> getSwPreds() { return swpreds; }
+    @Override
+    public List<TGRDMAaction> getSwSuccs() { return swsuccs; }
+
+}
+class TGRDMAReaderImpl extends TGReaderImpl implements TGRDMAaction {
+    List<TGRDMAaction> swpreds;
+    List<TGRDMAaction> swsuccs;
+
+    public TGRDMAReaderImpl(A4CodeGen.State s,
+            String label, TGMemoryLocation rl, int rV) {
+    	super(s,label,rl,rV);
+        this.swpreds = new LinkedList<>();
+        this.swsuccs = new LinkedList<>();
+    }
+
+    @Override
+    public List<TGRDMAaction> getSwPreds() { return swpreds; }
+    @Override
+    public List<TGRDMAaction> getSwSuccs() { return swsuccs; }
+
+}
 class TGInitialValue extends TGWriterImpl {
     public TGInitialValue(A4CodeGen.State s,
                           String label, TGMemoryLocation wl, int wV) {
@@ -145,7 +179,7 @@ class TGReaderImpl extends TGActionImpl implements TGReader {
     public void setRl(TGMemoryLocation rl) { this.rl = rl; }
 }
 
-class TGnRWpq extends TGWriterImpl implements TGActionpq, TGReader, TGWriter {
+class TGnRWpq extends TGRDMAWriterImpl implements TGRDMAaction, TGReader, TGWriter {
     private TGMemoryLocation rl;
     int rV;
 
@@ -165,14 +199,14 @@ class TGnRWpq extends TGWriterImpl implements TGActionpq, TGReader, TGWriter {
     public void setRl(TGMemoryLocation rl) { this.rl = rl; }
 }
 
-class TGReadpq extends TGReaderImpl implements TGActionpq {
+class TGReadpq extends TGRDMAReaderImpl implements TGRDMAaction {
     public TGReadpq(A4CodeGen.State s, String label,
                         TGMemoryLocation rl, int rV) {
         super(s, label, rl, rV);
     }
 }
 
-class TGReadp extends TGReaderImpl implements TGActionp {
+class TGReadp extends TGRDMAReaderImpl implements TGRDMAaction {
     public TGReadp(A4CodeGen.State s, String label,
                         TGMemoryLocation rl, int rV) {
         super(s, label, rl, rV);
@@ -180,7 +214,7 @@ class TGReadp extends TGReaderImpl implements TGActionp {
 }
 
 /* local read */
-class TGRead extends TGReaderImpl implements TGActionp {
+class TGRead extends TGReaderImpl implements TGAction {
     public TGRead(A4CodeGen.State s, String label,
                   TGMemoryLocation rl, int rV, TGRegister reg) {
         super(s, label, rl, rV);
@@ -195,33 +229,27 @@ class TGRead extends TGReaderImpl implements TGActionp {
     }
 }
 
-interface TGActionSXI extends TGAction {
-}
-
-interface TGActionpI extends TGAction {
-}
-
-interface TGActionpq extends TGAction {
-}
-
-interface TGActionp extends TGActionpI {
-}
-
-class TGWritepq extends TGWriterImpl implements TGWriter, TGActionpq {
+class TGWritepq extends TGRDMAWriterImpl implements TGWriter, TGRDMAaction {
     public TGWritepq(A4CodeGen.State s, String label,
                          TGMemoryLocation wl, int wV) {
         super(s, label, wl, wV);
     }
 }
 
-class TGWritep extends TGWriterImpl implements TGWriter, TGActionp {
+class TGWritep extends TGRDMAWriterImpl implements TGWriter, TGRDMAaction {
     public TGWritep(A4CodeGen.State s, String label,
                          TGMemoryLocation wl, int wV) {
         super(s, label, wl, wV);
     }
 }
+class TGWrite extends TGWriterImpl implements TGWriter, TGAction {
+    public TGWrite(A4CodeGen.State s, String label,
+                         TGMemoryLocation wl, int wV) {
+        super(s, label, wl, wV);
+    }
+}
 
-class TGSX extends TGActionImpl implements TGActionSXI {
+class TGSX extends TGRDMAactionImpl implements TGRDMAaction {
     public TGSX(A4CodeGen.State s, String label) {
         super(s, label);
     }
@@ -352,6 +380,8 @@ public class A4CodeGen {
     public String ACTION_LABEL() { return m("Action"); }
     public String LOC_CPU_ACTION_LABEL() { return m("LocalCPUaction"); }
     public String PO_FIELD_LABEL() { return "po"; }
+    public String SW_FIELD_LABEL() { return "sw"; }
+    public String RDMAaction_LABEL() { return m("RDMAaction"); }
     public String NODE_LABEL() { return m("Node"); }
     public String THR_LABEL() { return m("Thr"); }
     public String O_FIELD_LABEL() { return "o"; }
@@ -385,6 +415,7 @@ public class A4CodeGen {
     A4Solution solution;
     State state;
     Map<String, TGAction> labelToActions = new HashMap<>();
+    Map<String, TGRDMAaction> labelToRDMAactions = new HashMap<>();
     Map<String, TGMemoryLocation> labelToMemoryLocations =
         new HashMap<>();
     Map<String, TGRegister> labelToRegisters = new HashMap<>();
@@ -395,6 +426,7 @@ public class A4CodeGen {
     Map<String, TGThread> labelToThreads = new HashMap<>();
     Map<String, TGNode> labelToNodes = new HashMap<>();
     Map<TGThread, TGActionGraph> po = new HashMap<>();
+    TGRDMAactionGraph sw = null;
     Map<TGAction, TGThread> actionToThread = new HashMap<>();
 
     // the next maps are currently write-only
@@ -413,7 +445,7 @@ public class A4CodeGen {
         this.state = new State();
     }
 
-    Pattern stemPattern = Pattern.compile("(\\w*/)*[A-Z]?([A-Z]\\w*)(\\$.*)?");
+    Pattern stemPattern = Pattern.compile("(\\w*/)*(n?[RW][RW]?[p]?[q]?|Init)(\\w*)(\\$.*)?");
     /* create a TGWriter of the appropriate subtype */
     /* NOTE: not fresh if RemoteReadWrite & already exists */
     TGWriter newTGWriter(A4CodeGen.State s,
@@ -421,7 +453,7 @@ public class A4CodeGen {
         Matcher m = stemPattern.matcher(label);
         if (m.matches()) {
             String stem = m.group(2);
-            if (stem.equals("RemoteReadWrite")) {
+            if (stem.equals("nRWpq")) {
                 if (labelToReaders.containsKey(label)) {
                     TGnRWpq rw = (TGnRWpq)labelToReaders.get(label);
                     rw.setWl(wl); rw.setWv(wV);
@@ -429,13 +461,15 @@ public class A4CodeGen {
                 }
                 return new TGnRWpq(s, label, null, 0, wl, wV);
             }
-            if (stem.equals("ExternWrite"))
+            if (stem.equals("W"))
+                return new TGWrite(s, label, wl, wV);
+            if (stem.equals("nWp"))
                 return new TGWritep(s, label, wl, wV);
-            if (stem.equals("RemoteWrite"))
+            if (stem.equals("nWpq"))
                 return new TGWritepq(s, label, wl, wV);
-            if (stem.equals("InitialValue"))
+            if (stem.equals("Init"))
                 return new TGInitialValue(s, label, wl, wV);
-            if (stem.equals("RemoteReadWrite"))
+            if (stem.equals("nRWpq"))
                 return null;
         }
         return new TGWriterImpl(s, label, wl, wV, true);
@@ -450,7 +484,7 @@ public class A4CodeGen {
         Matcher m = stemPattern.matcher(label);
         if (m.matches()) {
             String stem = m.group(2);
-            if (stem.equals("RemoteReadWrite")) {
+            if (stem.equals("nRWpq")) {
                 if (labelToWriters.containsKey(label)) {
                     TGnRWpq rw = (TGnRWpq)labelToWriters.get(label);
                     rw.setRl(rl); rw.rV = rV;
@@ -458,15 +492,15 @@ public class A4CodeGen {
                 }
                 return new TGnRWpq(s, label, rl, rV, null, 0);
             }
-            if (stem.equals("RemoteRead"))
+            if (stem.equals("nRpq"))
                 return new TGReadpq(s, label, rl, rV);
-            if (stem.equals("ExternRead"))
+            if (stem.equals("nRp"))
                 return new TGReadp(s, label, rl, rV);
-            if (stem.equals("Read"))
+            if (stem.equals("R"))
                 return new TGRead(s, label, rl, rV, null);
         }
         if (true) {
-            System.out.println("error: " + label);
+            System.out.println("TGReader Matcher error, can't parse: " + label);
             System.exit(1);
         }
         return new TGReaderImpl(s, label, rl, rV);
@@ -571,7 +605,10 @@ public class A4CodeGen {
                 for (A4Tuple writer : writers) {
                     String label = writer.atom(0);
                     TGWriter w = newTGWriter(state, label, null, 0);
-
+                    
+                    if(w instanceof TGRDMAaction) {
+                    	labelToRDMAactions.put(label, (TGRDMAaction)w);                    	
+                    }
                     labelToWriters.put(label, w);
                     labelToActions.put(label, w);
                 }
@@ -604,6 +641,9 @@ public class A4CodeGen {
                 for (A4Tuple reader : readers) {
                     String label = reader.atom(0);
                     TGReader r = newTGReader(state, label, null, 0, null);
+                    if(r instanceof TGRDMAaction) {
+                    	labelToRDMAactions.put(label, (TGRDMAaction)r);                    	
+                    }
                     labelToReaders.put(label, r);
                     labelToActions.put(label, r);
                 }
@@ -655,6 +695,7 @@ public class A4CodeGen {
                     TGSX sx = new TGSX(state, label);
                     labelToSxs.put(label, sx);
                     labelToActions.put(label, sx);
+                    labelToRDMAactions.put(label, sx);
                 }                
             }
         }
@@ -722,6 +763,7 @@ public class A4CodeGen {
         }
     }
 
+    
     void parseProgramOrder() {
         for (Sig s : solution.getAllReachableSigs()) {
             if (s.label.equals(LOC_CPU_ACTION_LABEL())) {
@@ -745,6 +787,26 @@ public class A4CodeGen {
         }
     }
 
+    void parseSynchroniseWith() {
+        for (Sig s : solution.getAllReachableSigs()) {
+            if (s.label.equals(RDMAaction_LABEL())) {
+                for (Field f : s.getFields()) {
+                    if (f.label.equals(SW_FIELD_LABEL())) {
+                        A4TupleSet pos = solution.eval(f);
+                        for (A4Tuple po : pos) {
+                            TGRDMAaction src = labelToRDMAactions.get(po.atom(0));
+                            TGRDMAaction dest = labelToRDMAactions.get(po.atom(1));
+
+                            src.getSwSuccs().add(dest);
+                            dest.getSwPreds().add(src);
+                        }
+                    }
+                }
+            }
+        }
+        sw=new TGRDMAactionGraph(labelToRDMAactions.values());
+    }
+    
     void combineRemoteOp() {//TODO: they all are duplicated for fenced ops
         // rg has: label, actions, sx, read pq, write p
         // rp has: label, actions, sx, read p, write pq
@@ -781,7 +843,7 @@ public class A4CodeGen {
                     Set<TGAction> actions = ropLabelToActions.get(label);
                     Set<TGAction> rgActions = new HashSet<>();
 
-                    // find the remote read, extern write, and sx
+                    // find the remote read, external write, and sx
                     TGWritep ew = null;
                     TGReadpq rr = null;
                     TGSX sx = null;
@@ -798,17 +860,13 @@ public class A4CodeGen {
                         }
                     }
 
-                    assert rr != null && ew != null;
-                    if (rr == null || ew == null) return;
+                    if (rr == null || ew == null || sx == null) return;
 
-                    assert sx.getSuccs().size() == 1 && sx.getSuccs().contains(rr);
-                    assert rr.getSuccs().size() == 1 && rr.getSuccs().contains(ew);
-                    assert ew.getPreds().size() >= 1 && ew.getPreds().contains(rr);
-                    assert actionToThread.get(rr) != null;
-                    assert actionToThread.get(rr).label == actionToThread.get(ew).label;
+                    assertValidInstrActs(sx, rr, ew);
+            		assert sx.getD() == ew.getD();
                     //assert rr.getD() == ew.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
 
-                    TGThread thr = actionToThread.get(rr);
+                    TGThread thr = actionToThread.get(sx);
                     TGActionGraph tag = po.get(thr);
 
                     TGRemoteGet rg = new TGRemoteGet(state, label, rgActions,
@@ -819,7 +877,8 @@ public class A4CodeGen {
                     labelToActions.put(label, rg);
 
                     tag.remove(rr);
-                    tag.replace(ew, rg);
+                    tag.remove(ew);
+                    tag.replace(sx, rg);
                 }
             }
         }
@@ -850,19 +909,14 @@ public class A4CodeGen {
                         }
                     }
 
-                    assert rw != null && er != null;
-                    if (rw == null || er == null) return;
+                    if (rw == null || er == null || sx == null) return;
 
-
-                    assert sx.getSuccs().size() == 1 && sx.getSuccs().contains(er);
-                    assert er.getSuccs().size() == 1 && er.getSuccs().contains(rw);
-                    assert rw.getPreds().size() >= 1 && rw.getPreds().contains(er);
                     //assert rw.getD() == er.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
 
-                    assert actionToThread.get(er) != null;
-                    assert actionToThread.get(er).label == actionToThread.get(rw).label;
+                    assertValidInstrActs(sx,er,rw); 
+                    assert sx.getD() == er.getD();
 
-                    TGThread thr = actionToThread.get(er);
+                    TGThread thr = actionToThread.get(sx);
                     TGActionGraph tag = po.get(thr);
 
                     TGRemotePut rp = new TGRemotePut(state, label, rpActions,
@@ -873,7 +927,8 @@ public class A4CodeGen {
                     labelToActions.put(label, rp);
 
                     tag.remove(er);
-                    tag.replace(rw, rp);
+                    tag.remove(rw);
+                    tag.replace(sx, rp);
                 }
             }
         }
@@ -887,7 +942,7 @@ public class A4CodeGen {
                     Set<TGAction> actions = ropLabelToActions.get(label);
                     Set<TGAction> rgaActions = new HashSet<>();
 
-                    // find the remote write, extern read
+                    // find the remote write, external read
                     TGSX sx = null;
                     TGnRWpq rrw = null;
                     TGWritep ew = null;
@@ -904,10 +959,12 @@ public class A4CodeGen {
                         }
                     }
 
-                    assert sx != null && rrw != null && ew != null;
                     if (sx == null || rrw == null || ew == null) return;
 
-                    TGThread thr = actionToThread.get(ew);
+                    assertValidInstrActs(sx,rrw,ew); 
+
+                    assert sx.getD() == ew.getD();
+                    TGThread thr = actionToThread.get(sx);
                     TGActionGraph tag = po.get(thr);
 
                     TGRemoteGetAccumulate rga = new TGRemoteGetAccumulate(state, label, rgaActions,
@@ -918,7 +975,8 @@ public class A4CodeGen {
                     labelToActions.put(label, rga);
 
                     tag.remove(rrw);
-                    tag.replace(ew, rga);
+                    tag.remove(ew);
+                    tag.replace(sx, rga);
                 }
             }
         }
@@ -963,11 +1021,22 @@ public class A4CodeGen {
                     labelToActions.put(label, rcas);
 
                     tag.remove(ew);
-                    tag.replace(rrw, rcas);
+                    tag.remove(rrw);
+                    tag.replace(sx, rcas);
                 }
             }
         }
     }
+
+	private void assertValidInstrActs(TGSX sx, TGRDMAaction first_nic_act, TGRDMAaction second_nic_act) {
+		assert first_nic_act != null && second_nic_act != null && sx != null ;
+		assert sx.getSwSuccs().size() == 1 && sx.getSwSuccs().contains(first_nic_act);
+		assert first_nic_act.getSwSuccs().size() == 1 && first_nic_act.getSwSuccs().contains(second_nic_act);
+		assert second_nic_act.getSwPreds().size() >= 1 && second_nic_act.getSwPreds().contains(first_nic_act);
+		assert actionToThread.get(sx) != null;
+		assert actionToThread.get(sx).label == actionToThread.get(second_nic_act).label;
+		assert actionToThread.get(second_nic_act).label == actionToThread.get(first_nic_act).label;
+	}
 
     void parseWitness() {
         for (Sig s : solution.getAllReachableSigs()) {
@@ -1051,6 +1120,7 @@ public class A4CodeGen {
         parseOriginDestinationThreads();
         parseInitialValues();
         parseProgramOrder();
+        parseSynchroniseWith();
         parseWitness();
         parseLocalReads();
         combineRemoteOp();
