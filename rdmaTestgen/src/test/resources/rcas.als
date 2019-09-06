@@ -17,6 +17,9 @@ abstract sig LocalCPUaction extends Action{
 }
 
 pred cyclic [rel:Action->Action] {some a:Action | a in ^rel[a]}
+pred remoteMachineAction [a:Action] { not host[o[a]]=host[d[a]] }
+pred localMachineAction [a:Action] { host[o[a]]=host[d[a]] }
+
 
 fact {po_tc=^po_tc}
 fact {po_tc=~copo}
@@ -120,6 +123,9 @@ fact{all a:Sx |
 fact{all a:nA |
 	a.sw = a.nic_ord_sw+a.instr_sw//+a.poll_cq_sw
 }
+//small optimization
+fact{all a:nA | a.nic_ord_sw=none }
+
 //-----------
 /**instr-sw**/
 //-----------
@@ -150,6 +156,10 @@ fact{Init.~po_tc in Init}
 // one Init per one location
 fact  {all disj i1,i2:Init| not wl[i1]=wl[i2]}
 
+
+// read/write from the same machine as the action destination
+fact{all r:Reader | host[rl[r]]=host[d[r]] }
+fact{all w:Writer | host[wl[w]]=host[d[w]] }
 
 
 // assign some initial value

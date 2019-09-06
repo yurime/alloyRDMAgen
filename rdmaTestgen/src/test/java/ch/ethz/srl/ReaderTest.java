@@ -23,7 +23,7 @@ public class ReaderTest {
 	//TGThread t0 = res.labelToThreads.get("Thr$0");
 	//TGThread t1 = res.labelToThreads.get("Thr$1");
 
-	TGReader r0 = res.labelToReaders.get("ARead$0");
+	TGReader r0 = res.labelToReaders.get("R$0");
 	assert(r0.getRl() == ml0 || r0.getRl() == ml1);
 	assertEquals(r0.getRv(), 4);
     }

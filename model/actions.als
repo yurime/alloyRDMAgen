@@ -28,7 +28,8 @@ abstract sig Action {
 
 pred cyclic [rel:Action->Action] {some a:Action | a in ^rel[a]}
 pred sameOandD [a,b:Action] {o[a]=o[b] and  d[a]=d[b] }
-pred remoteMachine [a:Action] { not host[o[a]]=host[d[a]] }
+pred remoteMachineAction [a:Action] { not host[o[a]]=host[d[a]] }
+pred localMachineAction [a:Action] { host[o[a]]=host[d[a]] }
 
 sig Reader in Action {
 	rl: one MemoryLocation,
@@ -61,7 +62,8 @@ abstract sig LocalCPUaction extends Action{
 /* start NIC action (start external)*/
 abstract sig Sx extends LocalCPUaction{
 	instr : one Instruction,
-	instr_sw: one nA}
+	instr_sw: one nA
+}
 
 sig Sx_put extends Sx {}
 sig Sx_get extends Sx {}
@@ -92,7 +94,7 @@ fact {all a:U| not(a in RDMAaction)}
 /*NIC action*/
 abstract sig nA extends Action{
 	instr : one Instruction,
-	instr_sw: one nA,
+	instr_sw: lone nA,
     nic_ord_sw: set nA,
     poll_cq_sw: lone poll_cq
 }
@@ -109,11 +111,11 @@ fact {all r:nR| r in Reader and not(r in Writer)}
 
 /*NIC remote read*/
 sig nRpq extends nR{}
-fact {all a: nRpq| not host[o[a]] = host[d[a]]}
+fact {all a: nRpq| remoteMachineAction[a]}
 
 /*NIC local read*/
 sig nRp extends nR{}
-fact {all a: nRp| o[a] = d[a]}
+fact {all a: nRp| localMachineAction[a]}
 
 /*NIC Write*/
 abstract sig nW extends nA{}
@@ -121,22 +123,22 @@ fact {all w:nW| w in Writer and not(w in Reader)}
 
 /*NIC remote write*/
 sig nWpq extends nW{}
-fact { all a: nWpq| not host[o[a]] = host[d[a]]}
+fact { all a: nWpq| remoteMachineAction[a]}
 
 /*NIC local write*/
 sig nWp extends nW{}
-fact { all a: nWp| o[a] = d[a]}
+fact { all a: nWp| localMachineAction[a]}
 
 /*NIC read-write*/
 sig nRWpq extends nA{}
 fact {all rw:nRWpq| rw in Writer and rw in Reader}
-fact { all a: nRWpq| not host[o[a]] = host[d[a]]}
+fact { all a: nRWpq| remoteMachineAction[a]}
 
 
 /*RDMA Fence*/
 sig nF extends nA {}
 fact {all f:nF| not(f in Writer) and not (f in Reader)}
-fact {all a: nF| o[a] = d[a]}
+fact {all a: nF| localMachineAction[a]}
 
 /*poll_cq*/
 sig poll_cq extends LocalCPUaction {
@@ -277,7 +279,7 @@ fact {po_tc=^po_tc}
 fact {po_tc=~copo}
 fact{not cyclic[po_tc]}
 fact{all a,b:Action| b in a.po iff ((b in a.po_tc) and #(a.po_tc - b.po_tc)=1)} // for displaying po. 
-fact {all a: LocalCPUaction| o[a] = d[a]}
+fact {all a: LocalCPUaction| localMachineAction[a]}
 fact {all disj a,b: LocalCPUaction| 
                                       (o[a] = o[b])
                                       iff
@@ -294,7 +296,6 @@ fact {all disj a,b: LocalCPUaction|
 
 pred p { 
            #Put = 1 and
-            #Sx_cas = 1 and
             #Thr = 2}
 
 

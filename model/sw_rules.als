@@ -2,8 +2,6 @@ open actions as a
 
 /* construction of sw */
 
-//defined per instruction in action file
-
 fact{all a:Sx |
 	a.sw = a.instr_sw
 }
@@ -23,6 +21,7 @@ fact{all put:Put | // sx->nrp->nwpq
 		   #(instr_sw[nwpq])=0
      }
 }
+
 
 fact{all get:Get | // sx->nrpq->nwp
   let sx=actions[get] & Sx_get, 
@@ -104,6 +103,7 @@ fact{all cas:CasF | // sx->nf->nrwpq->nwp
 //-------------
 /**nic-ord-sw**/
 //-----------
+
 fact{all a:nA | not a in nic_ord_sw[a]}
 
 // predicates to define when nic_ord_sw is legal
@@ -112,8 +112,8 @@ pred putOrRDMAatomic [na1:nA,na2:nA] {
        sx2=actions[instr[na2]]&Sx {
            (sameOandD[na1,na2]) and//forcing same queuepair and starting thread
            (sx2 in sx1.po_tc)  and 
-  	       (remoteMachine[na1]) and   // sx1----->nWpq
-	       (remoteMachine[na2]) and   // ↓po         ↓nic_ord_sw
+  	       (remoteMachineAction[na1]) and   // sx1----->nWpq
+	       (remoteMachineAction[na2]) and   // ↓po         ↓nic_ord_sw
 	       (not na1 in nRpq)                // sx2----->na2 
   }//end of let 
 }
@@ -174,6 +174,7 @@ iff
 }
 
 fact {all nr:(nA&Reader),nw:(nA&Writer) | nw in nr.instr_sw => wV[nw]=rV[nr]}
+
 /*pred p1 { 
            #PutF = 1 and
             #Sx_cas = 1 and
@@ -205,6 +206,8 @@ pred putAndCas {
             #Cas = 1 and
             #Thr = 2}
 
-//run getThenPutF for 12
-//run putAfterPut for 10
+run getThenPutF for 12
+run putAfterPut for 10
 run putAndCas for 8
+
+

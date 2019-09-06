@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 
 import java.io.PrintWriter;
 
+import ch.ethz.srl.A4CodeGen.State;
 import ch.ethz.srl.util.PseudoTopologicalOrderer;
 
 class TGMemoryLocation {
@@ -151,10 +152,37 @@ class TGInitialValue extends TGWriterImpl {
     }
 }
 
-abstract class TGStatement extends TGActionImpl {
-    public TGStatement(A4CodeGen.State s, String label) {
+abstract class TGInstruction extends TGActionImpl {
+    public TGInstruction(A4CodeGen.State s, String label) {
         super(s, label);
     }
+
+    
+	public static void assertValidInstrActs(TGSX sx, TGRDMAaction first_nic_act, TGRDMAaction second_nic_act, Map<TGAction, TGThread> actionToThread) {
+		assert first_nic_act != null && second_nic_act != null && sx != null ;
+		assert sx.getSwSuccs().size() == 1 && sx.getSwSuccs().contains(first_nic_act);
+		assert first_nic_act.getSwSuccs().size() == 1 && first_nic_act.getSwSuccs().contains(second_nic_act);
+		assert first_nic_act.getSwPreds().size() >= 1 && first_nic_act.getSwPreds().contains(sx);
+		assert second_nic_act.getSwPreds().size() >= 1 && second_nic_act.getSwPreds().contains(first_nic_act);
+		assert actionToThread.get(sx) != null;
+		assert actionToThread.get(sx).label == actionToThread.get(second_nic_act).label;
+		assert actionToThread.get(second_nic_act).label == actionToThread.get(first_nic_act).label;
+		
+	}
+	public static void assertValidFencedInstrActs(TGSX sx, TGnF nf, TGRDMAaction first_nic_act, TGRDMAaction second_nic_act, Map<TGAction, TGThread> actionToThread) {
+		assert first_nic_act != null && second_nic_act != null && sx != null && nf !=null;
+		assert sx.getSwSuccs().size() == 1 && sx.getSwSuccs().contains(nf);
+		assert nf.getSwSuccs().size() == 1 && nf.getSwSuccs().contains(first_nic_act);
+		assert first_nic_act.getSwSuccs().size() == 1 && first_nic_act.getSwSuccs().contains(second_nic_act);
+
+		assert second_nic_act.getSwPreds().size() >= 1 && second_nic_act.getSwPreds().contains(first_nic_act);
+		assert first_nic_act.getSwPreds().size() >= 1 && first_nic_act.getSwPreds().contains(nf);
+		assert nf.getSwPreds().size() >= 1 && nf.getSwPreds().contains(sx);
+		assert actionToThread.get(sx) != null;
+		assert actionToThread.get(sx).label == actionToThread.get(nf).label;
+		assert actionToThread.get(nf).label == actionToThread.get(second_nic_act).label;
+		assert actionToThread.get(second_nic_act).label == actionToThread.get(first_nic_act).label;		
+	}
 }
 
 interface TGReader extends TGAction {
@@ -255,33 +283,14 @@ class TGSX extends TGRDMAactionImpl implements TGRDMAaction {
     }
 }
 
-
-class TGRemoteGet extends TGStatement {
-    Set<TGAction> actions;
-    TGSX     sx;
-    TGReadpq rpq;
-    TGWritep wp;
-
-    public TGRemoteGet(A4CodeGen.State s,
-                       String label,
-                       Set<TGAction> actions,
-                       TGSX     sx,
-                       TGReadpq rpq,
-                       TGWritep wp) {
+class TGnF extends TGRDMAactionImpl implements TGRDMAaction {
+    public TGnF(A4CodeGen.State s, String label) {
         super(s, label);
-        this.actions = actions;
-        this.sx = sx;
-        this.rpq = rpq;
-        this.wp = wp;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%s = get (%s,%s)", wp.getWl(), rpq.getRl(), rpq.getD().id);
     }
 }
 
-class TGRemotePut extends TGStatement {
+
+class TGRemotePut extends TGInstruction {
     Set<TGAction> actions;
     TGSX     sx;
     TGReadp rp;
@@ -304,9 +313,116 @@ class TGRemotePut extends TGStatement {
     public String toString() {
         return String.format("put (%s,%d,%s)", remoteWrite.getWl(), getD().id, rp.getRl());
     }
+    public static TGInstruction Compose(State state, String label, Set<TGAction> actions,
+			Map<TGAction, TGThread> actionToThread, Map<TGThread, TGActionGraph> po) {
+
+        Set<TGAction> rpActions = new HashSet<>();
+
+        // find the remote write, external read
+        TGReadp er = null;
+        TGWritepq rw = null;
+        TGSX sx = null;
+        for (TGAction a : actions) {
+            if (a instanceof TGWritepq) {
+                rw = (TGWritepq)a;
+                rpActions.add(rw);
+            } else if (a instanceof TGReadp) {
+                er = (TGReadp)a;
+                rpActions.add(er);
+            }else if (a instanceof TGSX) {
+                sx = (TGSX)a;
+                rpActions.add(sx);
+            }
+        }
+
+        if (rw == null || er == null || sx == null) throw new RuntimeException("Error constructing TGRemotePut: rr or ew or sx are null");
+
+        //assert rw.getD() == er.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
+
+        assertValidInstrActs(sx,er,rw, actionToThread); 
+        assert sx.getD() == er.getD();
+
+        TGThread thr = actionToThread.get(sx);
+        TGActionGraph tag = po.get(thr);
+
+        TGRemotePut putf = new TGRemotePut(state, label, rpActions,
+                                         sx, er, rw);
+        putf.setD(rw.getD());
+
+        tag.remove(er);
+        tag.remove(rw);
+        tag.replace(sx, putf);
+
+        return putf;
+	}
 }
 
-class TGRemoteCompareAndSwap extends TGStatement {
+class TGRemoteGet extends TGInstruction {
+    Set<TGAction> actions;
+    TGSX     sx;
+    TGReadpq rpq;
+    TGWritep wp;
+
+    public TGRemoteGet(A4CodeGen.State s,
+                       String label,
+                       Set<TGAction> actions,
+                       TGSX     sx,
+                       TGReadpq rpq,
+                       TGWritep wp) {
+        super(s, label);
+        this.actions = actions;
+        this.sx = sx;
+        this.rpq = rpq;
+        this.wp = wp;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s = get (%s,%s)", wp.getWl(), rpq.getRl(), rpq.getD().id);
+    }
+    
+	public static TGInstruction Compose(State state, String label, Set<TGAction> actions, Map<TGAction, TGThread> actionToThread, Map<TGThread, TGActionGraph> po){
+        Set<TGAction> rgActions = new HashSet<>();
+
+        // find the remote read, external write, and sx
+        TGWritep ew = null;
+        TGReadpq rr = null;
+        TGSX sx = null;
+        for (TGAction a : actions) {
+            if (a instanceof TGWritep) {
+                ew = (TGWritep)a;
+                rgActions.add(ew);
+            } else if (a instanceof TGReadpq) {
+                rr = (TGReadpq)a;
+                rgActions.add(rr);
+            }else if (a instanceof TGSX) {
+                sx = (TGSX)a;
+                rgActions.add(sx);
+            }
+        }
+
+        if (rr == null || ew == null || sx == null) throw new RuntimeException("Error constructing TGRemoteGet: rr or ew or sx are null");
+
+        assertValidInstrActs(sx, rr, ew, actionToThread);
+		assert sx.getD() == ew.getD();
+        //assert rr.getD() == ew.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
+
+        TGRemoteGet rg = new TGRemoteGet(state, label, rgActions,
+                                         sx, rr, ew);
+        rg.setD(rr.getD());// this one makes sense. The get is p-->q
+
+
+        TGThread thr = actionToThread.get(sx);
+        TGActionGraph tag = po.get(thr);
+        
+        tag.remove(rr);
+        tag.remove(ew);
+        tag.replace(sx, rg);
+        return rg;
+	}
+}
+
+class TGRemoteCompareAndSwap extends TGInstruction {
     Set<TGAction> actions;
     TGSX     sx;
     TGWritep wp;
@@ -329,9 +445,47 @@ class TGRemoteCompareAndSwap extends TGStatement {
     public String toString() {//X = cas(Z^q,y,w)
         return String.format("%s = cas (%s^%s,%d,%d,%d)", wp.getWl(), rwpq.getWl(), rwpq.getD().id, rwpq.getRv(), rwpq.getWv() );
     }
+
+	public static TGInstruction Compose(State state, String label, Set<TGAction> actions,
+			Map<TGAction, TGThread> actionToThread, Map<TGThread, TGActionGraph> po) {
+        Set<TGAction> rcasActions = new HashSet<>();
+
+        // find the remote readwrite pq, write p, and sx
+        TGSX sx = null;
+        TGWritep ew = null;
+        TGnRWpq rrw = null;
+        for (TGAction a : actions) {
+        	if (a instanceof TGSX) {
+                sx = (TGSX)a;
+                rcasActions.add(sx);
+            } else if (a instanceof TGnRWpq) {
+                rrw = ((TGnRWpq)a);
+                rcasActions.add(rrw);
+            } else if (a instanceof TGWritep) {
+                ew = (TGWritep)a;
+                rcasActions.add(ew);
+            }
+        }
+        assertValidInstrActs(sx,rrw,ew, actionToThread); 
+        
+        if (!(sx != null && ew != null && rrw != null)) throw new RuntimeException("Error constructing TGRemoteCompareAndSwap: rr or ew or sx are null");
+
+        TGThread thr = actionToThread.get(ew);
+        TGActionGraph tag = po.get(thr);
+
+        TGRemoteCompareAndSwap rcas = new TGRemoteCompareAndSwap
+            (state, label, rcasActions, sx, rrw, ew);
+        rcas.setD(rrw.getD());
+
+        tag.remove(ew);
+        tag.remove(rrw);
+        tag.replace(sx, rcas);
+        return rcas;
+	}
+
 }
 
-class TGRemoteGetAccumulate extends TGStatement {
+class TGRemoteGetAccumulate extends TGInstruction {
     Set<TGAction> actions;
     TGSX     sx;
     TGWritep wp;
@@ -354,6 +508,333 @@ class TGRemoteGetAccumulate extends TGStatement {
     public String toString() {// X = rga( Y^T1, y)
         return String.format("%s = rga (%s^%s, %d)", wp.getWl(), rwpq.getWl(), rwpq.getD().id, rwpq.getWv()); // TODO: is the model wrong? Where does the value (y) appear in execution?
     }
+
+	public static TGInstruction Compose(State state, String label, Set<TGAction> actions,
+			Map<TGAction, TGThread> actionToThread, Map<TGThread, TGActionGraph> po) {
+
+        Set<TGAction> rgaActions = new HashSet<>();
+
+        // find the remote write, external read
+        TGSX sx = null;
+        TGnRWpq rrw = null;
+        TGWritep ew = null;
+        for (TGAction a : actions) {
+        	if (a instanceof TGSX) {
+                sx = (TGSX)a;
+                rgaActions.add(sx);
+            } else if (a instanceof TGnRWpq) {
+                rrw = (TGnRWpq)a;
+                rgaActions.add(rrw);
+            } else if (a instanceof TGWritep) {
+                ew = (TGWritep)a;
+                rgaActions.add(ew);
+            }
+        }
+
+        if (sx == null || rrw == null || ew == null) throw new RuntimeException("Error constructing TGRemoteGetAccumulate: rr or ew or sx are null");
+
+        assertValidInstrActs(sx,rrw,ew, actionToThread); 
+
+        assert sx.getD() == ew.getD();
+        TGThread thr = actionToThread.get(sx);
+        TGActionGraph tag = po.get(thr);
+
+        TGRemoteGetAccumulate rga = new TGRemoteGetAccumulate(state, label, rgaActions,
+                                                              sx, ew, rrw);
+        rga.setD(rrw.getD());
+
+        tag.remove(rrw);
+        tag.remove(ew);
+        tag.replace(sx, rga);
+        return rga;
+
+	}
+}
+
+class TGFencedRemoteGet extends TGInstruction {
+    Set<TGAction> actions;
+    TGSX     sx;
+    TGnF     nf;
+    TGReadpq rpq;
+    TGWritep wp;
+
+    public TGFencedRemoteGet(A4CodeGen.State s,
+                       String label,
+                       Set<TGAction> actions,
+                       TGSX     sx,
+                       TGnF     nf,
+                       TGReadpq rpq,
+                       TGWritep wp) {
+        super(s, label);
+        this.actions = actions;
+        this.sx = sx;
+        this.nf = nf;
+        this.rpq = rpq;
+        this.wp = wp;
+    }
+	public static TGInstruction Compose(State state, String label, Set<TGAction> actions, Map<TGAction, TGThread> actionToThread, Map<TGThread, TGActionGraph> po){
+        Set<TGAction> rgActions = new HashSet<>();
+
+        // find the remote read, external write, and sx
+        TGWritep ew = null;
+        TGReadpq rr = null;
+        TGnF nf = null;
+        TGSX sx = null;
+        for (TGAction a : actions) {
+            if (a instanceof TGWritep) {
+                ew = (TGWritep)a;
+                rgActions.add(ew);
+            } else if (a instanceof TGReadpq) {
+                rr = (TGReadpq)a;
+                rgActions.add(rr);
+            }else if (a instanceof TGSX) {
+                sx = (TGSX)a;
+                rgActions.add(sx);
+            }else if (a instanceof TGnF) {
+                nf = (TGnF)a;
+                rgActions.add(nf);
+            }
+        }
+
+        if (rr == null || ew == null || sx == null|| nf == null) throw new RuntimeException("Error constructing TGFencedRemoteGet: rr or ew or sx are null");
+
+        assertValidFencedInstrActs(sx, nf, rr, ew, actionToThread);
+		assert sx.getD() == ew.getD();
+        //assert rr.getD() == ew.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
+
+        TGFencedRemoteGet getf = new TGFencedRemoteGet(state, label, rgActions,
+                                         sx, nf, rr, ew);
+        getf.setD(rr.getD());// this one makes sense. The get is p-->q
+
+
+        TGThread thr = actionToThread.get(sx);
+        TGActionGraph tag = po.get(thr);
+        
+        tag.remove(rr);
+        tag.remove(ew);
+        tag.remove(nf);
+        tag.replace(sx, getf);
+        return getf;
+	}
+    @Override
+    public String toString() {
+        return String.format("%s = getf (%s,%s)", wp.getWl(), rpq.getRl(), rpq.getD().id);
+    }
+}
+
+class TGFencedRemotePut extends TGInstruction {
+    Set<TGAction> actions;
+    TGSX     sx;
+    TGnF     nf;
+    TGReadp rp;
+    TGWritepq remoteWrite;
+
+    public TGFencedRemotePut(A4CodeGen.State s,
+                       String label,
+                       Set<TGAction> actions,
+                       TGSX     sx,
+                       TGnF     nf,
+                       TGReadp rp,
+                       TGWritepq wpq) {
+        super(s, label);
+        this.actions = actions;
+        this.sx = sx;
+        this.nf = nf;
+        this.rp = rp;
+        this.remoteWrite = wpq;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("putf (%s,%d,%s)", remoteWrite.getWl(), getD().id, rp.getRl());
+    }
+    public static TGInstruction Compose(State state, String label, Set<TGAction> actions,
+			Map<TGAction, TGThread> actionToThread, Map<TGThread, TGActionGraph> po) {
+
+        Set<TGAction> rpActions = new HashSet<>();
+
+        // find the remote write, external read
+        TGReadp er = null;
+        TGWritepq rw = null;
+        TGSX sx = null;
+        TGnF nf = null;
+        for (TGAction a : actions) {
+            if (a instanceof TGWritepq) {
+                rw = (TGWritepq)a;
+                rpActions.add(rw);
+            } else if (a instanceof TGReadp) {
+                er = (TGReadp)a;
+                rpActions.add(er);
+            }else if (a instanceof TGSX) {
+                sx = (TGSX)a;
+                rpActions.add(sx);
+            }else if (a instanceof TGnF) {
+                nf = (TGnF)a;
+                rpActions.add(nf);
+            }
+        }
+
+        if (rw == null || er == null || sx == null|| nf == null) throw new RuntimeException("Error constructing TGFencedRemotePut: rr or ew or sx are null");
+
+        //assert rw.getD() == er.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
+
+        assertValidFencedInstrActs(sx,nf,er,rw, actionToThread); 
+        assert sx.getD() == er.getD();
+
+        TGThread thr = actionToThread.get(sx);
+        TGActionGraph tag = po.get(thr);
+
+        TGFencedRemotePut putf = new TGFencedRemotePut(state, label, rpActions,
+                                         sx, nf, er, rw);
+        putf.setD(rw.getD());
+
+        tag.remove(er);
+        tag.remove(rw);
+        tag.remove(nf);
+        tag.replace(sx, putf);
+
+        return putf;
+	}
+}
+
+class TGFencedRemoteCompareAndSwap extends TGInstruction {
+    Set<TGAction> actions;
+    TGSX     sx;
+    TGnF     nf;
+    TGWritep wp;
+    TGnRWpq rwpq;
+
+    public TGFencedRemoteCompareAndSwap(A4CodeGen.State s,
+                            String label,
+                            Set<TGAction> actions,
+                            TGSX     sx,
+                            TGnF     nf,
+                            TGnRWpq rwpq,
+                            TGWritep wp) {
+        super(s, label);
+        this.actions = actions;
+        this.sx = sx;
+        this.nf = nf;
+        this.rwpq = rwpq;
+        this.wp = wp;
+    }
+
+    @Override
+    public String toString() {//X = casf(Z^q,y,w)
+        return String.format("%s = casf (%s^%s,%d,%d,%d)", wp.getWl(), rwpq.getWl(), rwpq.getD().id, rwpq.getRv(), rwpq.getWv() );
+    }
+
+	public static TGInstruction Compose(State state, String label, Set<TGAction> actions,
+			Map<TGAction, TGThread> actionToThread, Map<TGThread, TGActionGraph> po) {
+        Set<TGAction> rcasfActions = new HashSet<>();
+
+        // find the remote readwrite pq, write p, and sx
+        TGSX sx = null;
+        TGWritep wp = null;
+        TGnRWpq rwpq = null;
+        TGnF nf = null;
+        for (TGAction a : actions) {
+        	if (a instanceof TGSX) {
+                sx = (TGSX)a;
+                rcasfActions.add(sx);
+            } else if (a instanceof TGnRWpq) {
+                rwpq = ((TGnRWpq)a);
+                rcasfActions.add(rwpq);
+            } else if (a instanceof TGWritep) {
+                wp = (TGWritep)a;
+                rcasfActions.add(wp);
+            }else if (a instanceof TGnF) {
+                nf = (TGnF)a;
+                rcasfActions.add(wp);
+            }
+        }
+        assertValidFencedInstrActs(sx,nf, rwpq,wp, actionToThread); 
+        
+        if (!(sx != null && wp != null && rwpq != null)) throw new RuntimeException("Error constructing TGRemoteCompareAndSwap: rr or ew or sx are null");
+
+        TGThread thr = actionToThread.get(wp);
+        TGActionGraph tag = po.get(thr);
+
+        TGFencedRemoteCompareAndSwap casf = new TGFencedRemoteCompareAndSwap
+            (state, label, rcasfActions, sx, nf, rwpq, wp);
+        casf.setD(rwpq.getD());
+
+        tag.remove(wp);
+        tag.remove(rwpq);
+        tag.remove(nf);
+        tag.replace(sx, casf);
+        return casf;
+	}
+}
+
+class TGFencedRemoteGetAccumulate extends TGInstruction {
+    Set<TGAction> actions;
+    TGSX     sx;
+    TGnF     nf;
+    TGWritep wp;
+    TGnRWpq rwpq;
+
+    public TGFencedRemoteGetAccumulate(A4CodeGen.State s,
+                                 String label,
+                                 Set<TGAction> actions,
+                                 TGSX     sx,
+                                 TGnF     nf,
+                                 TGnRWpq rwpq,
+                                 TGWritep wp) {
+        super(s, label);
+        this.actions = actions;
+        this.sx = sx;
+        this.nf = nf;
+        this.rwpq = rwpq;
+        this.wp = wp;
+    }
+
+    @Override
+    public String toString() {// X = rgaf( Y^T1, y)
+        return String.format("%s = rgaf (%s^%s, %d)", wp.getWl(), rwpq.getWl(), rwpq.getD().id, rwpq.getWv()); // TODO: is the model wrong? Where does the value (y) appear in execution?
+    }
+	public static TGInstruction Compose(State state, String label, Set<TGAction> actions,
+			Map<TGAction, TGThread> actionToThread, Map<TGThread, TGActionGraph> po) {
+        Set<TGAction> rgafActions = new HashSet<>();
+
+        // find the remote readwrite pq, write p, and sx
+        TGSX sx = null;
+        TGWritep wp = null;
+        TGnRWpq rwpq = null;
+        TGnF nf = null;
+        for (TGAction a : actions) {
+        	if (a instanceof TGSX) {
+                sx = (TGSX)a;
+                rgafActions.add(sx);
+            } else if (a instanceof TGnRWpq) {
+                rwpq = ((TGnRWpq)a);
+                rgafActions.add(rwpq);
+            } else if (a instanceof TGWritep) {
+                wp = (TGWritep)a;
+                rgafActions.add(wp);
+            }else if (a instanceof TGnF) {
+                nf = (TGnF)a;
+                rgafActions.add(wp);
+            }
+        }
+        assertValidFencedInstrActs(sx,nf, rwpq,wp, actionToThread); 
+        
+        if (!(sx != null && wp != null && rwpq != null)) throw new RuntimeException("Error constructing TGRemoteCompareAndSwap: rr or ew or sx are null");
+
+        TGThread thr = actionToThread.get(wp);
+        TGActionGraph tag = po.get(thr);
+
+        TGFencedRemoteGetAccumulate rgaf = new TGFencedRemoteGetAccumulate
+            (state, label, rgafActions, sx, nf, rwpq, wp);
+        rgaf.setD(rwpq.getD());
+
+        tag.remove(wp);
+        tag.remove(rwpq);
+        tag.remove(nf);
+        tag.replace(sx, rgaf);
+        return rgaf;
+	}
+    
 }
 
 class TGPollCQ extends TGActionImpl {
@@ -397,8 +878,9 @@ public class A4CodeGen {
     public String RL_FIELD_LABEL() { return "rl"; }
     public String RV_FIELD_LABEL() { return "rV"; }
     public String POLL_CQ_LABEL() { return m("poll_cq"); }
-    public String SX_LABEL() { return m("Sx"); }
+    public String NF_LABEL() { return m("nF"); }
     public String R_LABEL() { return m("R"); }
+    public String SX_LABEL() { return m("Sx"); }
     public String W_LABEL() { return m("W"); }
     public String Put_LABEL() { return m("Put"); }
     public String PutF_LABEL() { return m("PutF"); }
@@ -430,14 +912,11 @@ public class A4CodeGen {
     Map<TGAction, TGThread> actionToThread = new HashMap<>();
 
     // the next maps are currently write-only
-    Map<String, TGRemoteGet> labelToRgs = new HashMap<>();
-    Map<String, TGRemotePut> labelToRps = new HashMap<>();
-    Map<String, TGRemoteGetAccumulate> labelToRgas = new HashMap<>();
-    Map<String, TGRemoteCompareAndSwap> labelToRcass = new HashMap<>();
+    Map<String, TGInstruction> labelToInstr = new HashMap<>();
 
-    TGRead witness;
+    TGReader witness;
     TGThread witnessThread;
-    Map<TGThread, List<TGRead>> threadToLocalReads = new HashMap<>();
+    Map<TGThread, List<TGReader>> threadToLocalReads = new HashMap<>();
 
     public A4CodeGen(A4Solution solution, String m) {
         this.solution = solution;
@@ -701,7 +1180,21 @@ public class A4CodeGen {
         }
     }
 
-    
+
+    void parseNf() {
+        for (Sig s : solution.getAllReachableSigs()) {
+            if (s.label.equals(NF_LABEL())) {
+                A4TupleSet nfActions = solution.eval(s);
+                for (A4Tuple nf_tuple : nfActions) {
+                    String label = nf_tuple.atom(0);
+                    TGnF nf = new TGnF(state, label);
+                    labelToActions.put(label, nf);
+                    labelToRDMAactions.put(label, nf);
+                }                
+            }
+        }
+    }
+
     void parsePollcq() {
         for (Sig s : solution.getAllReachableSigs()) {
             if (s.label.equals(POLL_CQ_LABEL())) {
@@ -841,209 +1334,91 @@ public class A4CodeGen {
                 for (A4Tuple rgt : rgs) {
                     String label = rgt.atom(0);
                     Set<TGAction> actions = ropLabelToActions.get(label);
-                    Set<TGAction> rgActions = new HashSet<>();
 
-                    // find the remote read, external write, and sx
-                    TGWritep ew = null;
-                    TGReadpq rr = null;
-                    TGSX sx = null;
-                    for (TGAction a : actions) {
-                        if (a instanceof TGWritep) {
-                            ew = (TGWritep)a;
-                            rgActions.add(ew);
-                        } else if (a instanceof TGReadpq) {
-                            rr = (TGReadpq)a;
-                            rgActions.add(rr);
-                        }else if (a instanceof TGSX) {
-                            sx = (TGSX)a;
-                            rgActions.add(sx);
-                        }
-                    }
-
-                    if (rr == null || ew == null || sx == null) return;
-
-                    assertValidInstrActs(sx, rr, ew);
-            		assert sx.getD() == ew.getD();
-                    //assert rr.getD() == ew.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
-
-                    TGThread thr = actionToThread.get(sx);
-                    TGActionGraph tag = po.get(thr);
-
-                    TGRemoteGet rg = new TGRemoteGet(state, label, rgActions,
-                                                     sx, rr, ew);
-                    rg.setD(rr.getD());// this one makes sense. The get is p-->q
-
-                    labelToRgs.put(label, rg);
+                    TGInstruction rg = TGRemoteGet.Compose(state, label, actions, actionToThread, po);
+                    labelToInstr.put(label, rg);
                     labelToActions.put(label, rg);
-
-                    tag.remove(rr);
-                    tag.remove(ew);
-                    tag.replace(sx, rg);
                 }
-            }
-        }
-
-        // rp
-        for (Sig s : solution.getAllReachableSigs()) {
-            if (s.label.equals(Put_LABEL())) {
+            }else if (s.label.equals(Put_LABEL())) {
                 A4TupleSet rps = solution.eval(s);
                 for (A4Tuple rpt : rps) {
                     String label = rpt.atom(0);
                     Set<TGAction> actions = ropLabelToActions.get(label);
-                    Set<TGAction> rpActions = new HashSet<>();
 
-                    // find the remote write, extern read
-                    TGReadp er = null;
-                    TGWritepq rw = null;
-                    TGSX sx = null;
-                    for (TGAction a : actions) {
-                        if (a instanceof TGWritepq) {
-                            rw = (TGWritepq)a;
-                            rpActions.add(rw);
-                        } else if (a instanceof TGReadp) {
-                            er = (TGReadp)a;
-                            rpActions.add(er);
-                        }else if (a instanceof TGSX) {
-                            sx = (TGSX)a;
-                            rpActions.add(sx);
-                        }
-                    }
-
-                    if (rw == null || er == null || sx == null) return;
-
-                    //assert rw.getD() == er.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
-
-                    assertValidInstrActs(sx,er,rw); 
-                    assert sx.getD() == er.getD();
-
-                    TGThread thr = actionToThread.get(sx);
-                    TGActionGraph tag = po.get(thr);
-
-                    TGRemotePut rp = new TGRemotePut(state, label, rpActions,
-                                                     sx, er, rw);
-                    rp.setD(rw.getD());
-
-                    labelToRps.put(label, rp);
+                    TGInstruction rp = TGRemotePut.Compose(state, label, actions, actionToThread, po);
+                    labelToInstr.put(label, rp);
                     labelToActions.put(label, rp);
-
-                    tag.remove(er);
-                    tag.remove(rw);
-                    tag.replace(sx, rp);
                 }
-            }
-        }
-
-        // rga
-        for (Sig s : solution.getAllReachableSigs()) {
-            if (s.label.equals(RGA_LABEL())) {
+            }else if (s.label.equals(RGA_LABEL())) {
                 A4TupleSet rgas = solution.eval(s);
                 for (A4Tuple rgat : rgas) {
                     String label = rgat.atom(0);
-                    Set<TGAction> actions = ropLabelToActions.get(label);
-                    Set<TGAction> rgaActions = new HashSet<>();
+                    Set<TGAction> actions = ropLabelToActions.get(label);                    
 
-                    // find the remote write, external read
-                    TGSX sx = null;
-                    TGnRWpq rrw = null;
-                    TGWritep ew = null;
-                    for (TGAction a : actions) {
-                    	if (a instanceof TGSX) {
-                            sx = (TGSX)a;
-                            rgaActions.add(sx);
-                        } else if (a instanceof TGnRWpq) {
-                            rrw = (TGnRWpq)a;
-                            rgaActions.add(rrw);
-                        } else if (a instanceof TGWritep) {
-                            ew = (TGWritep)a;
-                            rgaActions.add(ew);
-                        }
-                    }
-
-                    if (sx == null || rrw == null || ew == null) return;
-
-                    assertValidInstrActs(sx,rrw,ew); 
-
-                    assert sx.getD() == ew.getD();
-                    TGThread thr = actionToThread.get(sx);
-                    TGActionGraph tag = po.get(thr);
-
-                    TGRemoteGetAccumulate rga = new TGRemoteGetAccumulate(state, label, rgaActions,
-                                                                          sx, ew, rrw);
-                    rga.setD(rrw.getD());
-
-                    labelToRgas.put(label, rga);
-                    labelToActions.put(label, rga);
-
-                    tag.remove(rrw);
-                    tag.remove(ew);
-                    tag.replace(sx, rga);
+                    TGInstruction rga = TGRemoteGetAccumulate.Compose(state, label, actions, actionToThread, po);                    labelToInstr.put(label, rga);
+                    labelToInstr.put(label, rga);
+                    labelToActions.put(label, rga);                
                 }
-            }
-        }
-
-        // rcas
-        for (Sig s : solution.getAllReachableSigs()) {
-            if (s.label.equals(CAS_LABEL())) {
+            }else if (s.label.equals(CAS_LABEL())) {
                 A4TupleSet rcass = solution.eval(s);
                 for (A4Tuple rcast : rcass) {
                     String label = rcast.atom(0);
                     Set<TGAction> actions = ropLabelToActions.get(label);
-                    Set<TGAction> rcasActions = new HashSet<>();
 
-                    // find the remote readwrite pq, write p, and sx
-                    TGSX sx = null;
-                    TGWritep ew = null;
-                    TGnRWpq rrw = null;
-                    for (TGAction a : actions) {
-                    	if (a instanceof TGSX) {
-                            sx = (TGSX)a;
-                            rcasActions.add(sx);
-                        } else if (a instanceof TGnRWpq) {
-                            rrw = ((TGnRWpq)a);
-                            rcasActions.add(rrw);
-                        } else if (a instanceof TGWritep) {
-                            ew = (TGWritep)a;
-                            rcasActions.add(ew);
-                        }
-                    }
-
-                    assert   sx != null && ew != null && rrw != null;
-                    if (!(sx != null && ew != null && rrw != null)) return;
-
-                    TGThread thr = actionToThread.get(ew);
-                    TGActionGraph tag = po.get(thr);
-
-                    TGRemoteCompareAndSwap rcas = new TGRemoteCompareAndSwap
-                        (state, label, rcasActions, sx, rrw, ew);
-                    rcas.setD(rrw.getD());
-
-                    labelToRcass.put(label, rcas);
+                    TGInstruction rcas = TGRemoteCompareAndSwap.Compose(state, label, actions, actionToThread, po);
+                    labelToInstr.put(label, rcas);
                     labelToActions.put(label, rcas);
+                }
+            }else if (s.label.equals(GetF_LABEL())) {
+                A4TupleSet rgs = solution.eval(s);
+                for (A4Tuple rgt : rgs) {
+                    String label = rgt.atom(0);
+                    Set<TGAction> actions = ropLabelToActions.get(label);
 
-                    tag.remove(ew);
-                    tag.remove(rrw);
-                    tag.replace(sx, rcas);
+                    TGInstruction rg = TGFencedRemoteGet.Compose(state, label, actions, actionToThread, po);
+                    labelToInstr.put(label, rg);
+                    labelToActions.put(label, rg);
+                }
+            }else if (s.label.equals(PutF_LABEL())) {
+                A4TupleSet rps = solution.eval(s);
+                for (A4Tuple rpt : rps) {
+                    String label = rpt.atom(0);
+                    Set<TGAction> actions = ropLabelToActions.get(label);
+
+                    TGInstruction rp = TGFencedRemotePut.Compose(state, label, actions, actionToThread, po);
+                    labelToInstr.put(label, rp);
+                    labelToActions.put(label, rp);
+                }
+            }else if (s.label.equals(RGAF_LABEL())) {
+                A4TupleSet rgas = solution.eval(s);
+                for (A4Tuple rgat : rgas) {
+                    String label = rgat.atom(0);
+                    Set<TGAction> actions = ropLabelToActions.get(label);                    
+
+                    TGInstruction rga = TGFencedRemoteGetAccumulate.Compose(state, label, actions, actionToThread, po);                    labelToInstr.put(label, rga);
+                    labelToInstr.put(label, rga);
+                    labelToActions.put(label, rga);                
+                }
+            }else if (s.label.equals(CASF_LABEL())) {
+                A4TupleSet rcass = solution.eval(s);
+                for (A4Tuple rcast : rcass) {
+                    String label = rcast.atom(0);
+                    Set<TGAction> actions = ropLabelToActions.get(label);
+
+                    TGInstruction rcas = TGFencedRemoteCompareAndSwap.Compose(state, label, actions, actionToThread, po);
+                    labelToInstr.put(label, rcas);
+                    labelToActions.put(label, rcas);
                 }
             }
         }
     }
-
-	private void assertValidInstrActs(TGSX sx, TGRDMAaction first_nic_act, TGRDMAaction second_nic_act) {
-		assert first_nic_act != null && second_nic_act != null && sx != null ;
-		assert sx.getSwSuccs().size() == 1 && sx.getSwSuccs().contains(first_nic_act);
-		assert first_nic_act.getSwSuccs().size() == 1 && first_nic_act.getSwSuccs().contains(second_nic_act);
-		assert second_nic_act.getSwPreds().size() >= 1 && second_nic_act.getSwPreds().contains(first_nic_act);
-		assert actionToThread.get(sx) != null;
-		assert actionToThread.get(sx).label == actionToThread.get(second_nic_act).label;
-		assert actionToThread.get(second_nic_act).label == actionToThread.get(first_nic_act).label;
-	}
 
     void parseWitness() {
         for (Sig s : solution.getAllReachableSigs()) {
             if (s.label.equals(WITNESS_LABEL())) {
                 A4TupleSet ws = solution.eval(s);
                 for (A4Tuple w : ws) {
-                    witness = (TGRead)labelToReaders.get(w.atom(0));
+                    witness = (TGReader)labelToReaders.get(w.atom(0));
                 }
             }
         }
@@ -1054,7 +1429,7 @@ public class A4CodeGen {
 
     void parseLocalReads() {
         for (TGThread t : labelToThreads.values()) {
-            threadToLocalReads.put(t, new ArrayList<TGRead>());
+            threadToLocalReads.put(t, new ArrayList<TGReader>());
         }
 
         for (Sig s : solution.getAllReachableSigs()) {
@@ -1062,7 +1437,7 @@ public class A4CodeGen {
                 A4TupleSet rs = solution.eval(s);
                 for (A4Tuple r : rs) {
 
-                    TGRead read = (TGRead)labelToReaders.get(r.atom(0));
+                	TGReader read = (TGReader)labelToReaders.get(r.atom(0));
                     TGThread thread = actionToThread.get(read);
 
                     threadToLocalReads.get(thread).add(read);
@@ -1116,6 +1491,7 @@ public class A4CodeGen {
         parseReaders(); 
         parseWriters(); 
         parseSx();
+        parseNf();
         parsePollcq();
         parseOriginDestinationThreads();
         parseInitialValues();
