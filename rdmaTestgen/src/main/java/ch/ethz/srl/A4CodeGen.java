@@ -161,7 +161,7 @@ abstract class TGInstruction extends TGActionImpl {
 	public static void assertValidInstrActs(TGSX sx, TGRDMAaction first_nic_act, TGRDMAaction second_nic_act, Map<TGAction, TGThread> actionToThread) {
 		assert first_nic_act != null && second_nic_act != null && sx != null ;
 		assert sx.getSwSuccs().size() == 1 && sx.getSwSuccs().contains(first_nic_act);
-		assert first_nic_act.getSwSuccs().size() == 1 && first_nic_act.getSwSuccs().contains(second_nic_act);
+		assert first_nic_act.getSwSuccs().size() >= 1 && first_nic_act.getSwSuccs().contains(second_nic_act);
 		assert first_nic_act.getSwPreds().size() >= 1 && first_nic_act.getSwPreds().contains(sx);
 		assert second_nic_act.getSwPreds().size() >= 1 && second_nic_act.getSwPreds().contains(first_nic_act);
 		assert actionToThread.get(sx) != null;
@@ -173,7 +173,7 @@ abstract class TGInstruction extends TGActionImpl {
 		assert first_nic_act != null && second_nic_act != null && sx != null && nf !=null;
 		assert sx.getSwSuccs().size() == 1 && sx.getSwSuccs().contains(nf);
 		assert nf.getSwSuccs().size() == 1 && nf.getSwSuccs().contains(first_nic_act);
-		assert first_nic_act.getSwSuccs().size() == 1 && first_nic_act.getSwSuccs().contains(second_nic_act);
+		assert first_nic_act.getSwSuccs().size() >= 1 && first_nic_act.getSwSuccs().contains(second_nic_act);
 
 		assert second_nic_act.getSwPreds().size() >= 1 && second_nic_act.getSwPreds().contains(first_nic_act);
 		assert first_nic_act.getSwPreds().size() >= 1 && first_nic_act.getSwPreds().contains(nf);

@@ -154,8 +154,8 @@ abstract sig Instruction {
   all disj a1,a2:actions | o[a1]=o[a2]
 }
 
-fact {all i: Instruction| all a:actions[i]&Sx | instr[a] = i}
-fact {all i: Instruction| all a:actions[i]&nA | instr[a] = i}
+fact {all a: Sx| all i: Instruction | instr[a] = i iff a in i.actions}
+fact {all a: nA| all i: Instruction | instr[a] = i iff a in i.actions}
 
 sig Put extends Instruction {}{ 
   #actions = 3 and 
