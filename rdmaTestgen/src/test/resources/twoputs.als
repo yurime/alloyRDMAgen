@@ -235,4 +235,5 @@ fact {#(Node)=2 and #(Thr)=2
 
 pred show {}
 
+
 run show for 7

@@ -866,6 +866,7 @@ public class A4CodeGen {
     public String NODE_LABEL() { return m("Node"); }
     public String THR_LABEL() { return m("Thr"); }
     public String O_FIELD_LABEL() { return "o"; }
+    public String REG_FIELD_LABEL() { return "reg"; }
     public String D_FIELD_LABEL() { return "d"; }
     public String MEMORY_LOCATION_LABEL() { return m("MemoryLocation"); }
     public String REGISTER_LABEL() { return m("Register"); }
@@ -1054,7 +1055,7 @@ public class A4CodeGen {
 
     void parseRegisters() {//finding all local reads, and for each read creating a unique local variable
         for (Sig s : solution.getAllReachableSigs()) {
-            if (s.label.equals(R_LABEL())) {
+            if (s.label.equals(REGISTER_LABEL())) {
                 A4TupleSet rs = solution.eval(s);
                 for (A4Tuple rl : rs) {
                     String label = rl.atom(0);
@@ -1146,7 +1147,7 @@ public class A4CodeGen {
                 }
             }
         }
-/*
+
         for (Sig s : solution.getAllReachableSigs()) {
             if (s.label.equals(R_LABEL())) {
                 for (Field f : s.getFields()) {
@@ -1161,7 +1162,7 @@ public class A4CodeGen {
                 }
             }           
         }
-        */
+       
     }
 
 

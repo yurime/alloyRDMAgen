@@ -29,7 +29,7 @@ fact {Writer - Init in corf[R]}
 fact { all disj w1, w2: W+Init| not (wV[w1] = wV[w2])}
 
 /* Values written by local writes are between [0 .. #Write]*/
-fact { all w: Writer| 0 <=  wV[w] and wV[w] < #Writer}
+fact { all w: Writer| 0 <=  wV[w] and wV[w] < #W}
 
 
 /** Specific test requirement or optimizations**/
@@ -73,6 +73,8 @@ fact{all i:Instruction,
           (nrp in i.actions and sx in i.actions and w in sx.po_tc)
            => not( rl[nrp] = wl[w] )}
 
+
+fact{all disj r1,r2:R| not reg[r1]=reg[r2]}
 
 /* removes Univ objects */
 sig Dummy {}
