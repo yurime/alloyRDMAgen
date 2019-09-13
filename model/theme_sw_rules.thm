@@ -17,11 +17,12 @@
    <type name="a/CasF"/>
    <type name="a/Get"/>
    <type name="a/GetF"/>
+   <type name="a/Init"/>
    <type name="a/Instruction"/>
    <type name="a/LocalCPUaction"/>
    <type name="a/MemoryLocation"/>
    <type name="a/nA"/>
-   <type name="a/nFpq"/>
+   <type name="a/nF"/>
    <type name="a/Node"/>
    <type name="a/nR"/>
    <type name="a/nRp"/>
@@ -34,6 +35,7 @@
    <type name="a/Put"/>
    <type name="a/PutF"/>
    <type name="a/R"/>
+   <type name="a/Register"/>
    <type name="a/Rga"/>
    <type name="a/RgaF"/>
    <type name="a/Sx"/>
@@ -51,10 +53,10 @@
 </node>
 
 <edge visible="no">
-   <relation name="actions"> <type name="a/Instruction"/> <type name="a/Action"/> </relation>
    <relation name="co_poll_cq_sw"> <type name="a/poll_cq"/> <type name="a/nA"/> </relation>
    <relation name="copo"> <type name="a/LocalCPUaction"/> <type name="a/LocalCPUaction"/> </relation>
    <relation name="corf"> <type name="a/Action"/> <type name="a/Action"/> </relation>
+   <relation name="po_tc"> <type name="a/LocalCPUaction"/> <type name="a/LocalCPUaction"/> </relation>
    <relation name="sw"> <type name="a/Action"/> <type name="a/Action"/> </relation>
 </edge>
 
