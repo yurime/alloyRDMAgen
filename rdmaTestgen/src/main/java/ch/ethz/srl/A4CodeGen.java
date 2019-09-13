@@ -340,7 +340,7 @@ class TGRemotePut extends TGInstruction {
         //assert rw.getD() == er.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
 
         assertValidInstrActs(sx,er,rw, actionToThread); 
-        assert sx.getD() == er.getD();
+        assert sx.getD() == rw.getD();
 
         TGThread thr = actionToThread.get(sx);
         TGActionGraph tag = po.get(thr);
@@ -404,7 +404,7 @@ class TGRemoteGet extends TGInstruction {
         if (rr == null || ew == null || sx == null) throw new RuntimeException("Error constructing TGRemoteGet: rr or ew or sx are null");
 
         assertValidInstrActs(sx, rr, ew, actionToThread);
-		assert sx.getD() == ew.getD();
+		assert sx.getD() == rr.getD();
         //assert rr.getD() == ew.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
 
         TGRemoteGet rg = new TGRemoteGet(state, label, rgActions,
@@ -535,7 +535,7 @@ class TGRemoteGetAccumulate extends TGInstruction {
 
         assertValidInstrActs(sx,rrw,ew, actionToThread); 
 
-        assert sx.getD() == ew.getD();
+        assert sx.getD() == rrw.getD();
         TGThread thr = actionToThread.get(sx);
         TGActionGraph tag = po.get(thr);
 
@@ -599,7 +599,7 @@ class TGFencedRemoteGet extends TGInstruction {
         if (rr == null || ew == null || sx == null|| nf == null) throw new RuntimeException("Error constructing TGFencedRemoteGet: rr or ew or sx are null");
 
         assertValidFencedInstrActs(sx, nf, rr, ew, actionToThread);
-		assert sx.getD() == ew.getD();
+		assert sx.getD() == rr.getD();
         //assert rr.getD() == ew.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
 
         TGFencedRemoteGet getf = new TGFencedRemoteGet(state, label, rgActions,
@@ -679,7 +679,7 @@ class TGFencedRemotePut extends TGInstruction {
         //assert rw.getD() == er.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
 
         assertValidFencedInstrActs(sx,nf,er,rw, actionToThread); 
-        assert sx.getD() == er.getD();
+        assert sx.getD() == rw.getD();
 
         TGThread thr = actionToThread.get(sx);
         TGActionGraph tag = po.get(thr);
@@ -837,7 +837,7 @@ class TGFencedRemoteGetAccumulate extends TGInstruction {
     
 }
 
-class TGPollCQ extends TGActionImpl {
+class TGPollCQ extends TGRDMAactionImpl {
     public TGPollCQ(A4CodeGen.State s, String label) {
         super(s, label);
     }
@@ -1205,6 +1205,7 @@ public class A4CodeGen {
                     TGPollCQ pcq = new TGPollCQ(state, label);
                     LabelToPollCQ.put(label, pcq);
                     labelToActions.put(label, pcq);
+                    labelToRDMAactions.put(label, pcq);
                 }
                 // parseOriginDestination handles assignment to threads
             }
@@ -1326,9 +1327,7 @@ public class A4CodeGen {
             }
         }
 
-        //TODO: each if below is could be refactored. e.g. for the next one: create as a method of TGRemoteGet
-        // the method could be inherited from TGStatement above, and activated accordingly
-        // rg
+
         for (Sig s : solution.getAllReachableSigs()) {
             if (s.label.equals(Get_LABEL())) {
                 A4TupleSet rgs = solution.eval(s);
