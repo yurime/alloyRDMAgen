@@ -1,5 +1,8 @@
 // -*-  indent-tabs-mode:nil; c-basic-offset:4; -*-
 import java.util.List;
+
+import javax.management.RuntimeErrorException;
+
 import java.util.ArrayList;
 
 public class RDMAvisitor extends TLBaseVisitor<Object> {
@@ -76,12 +79,13 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitFlush(TLParser.FlushContext ctx) {
+    public Object visitPollcq(TLParser.PollcqContext ctx) {
         List<String> insts = result.processContents.get(this.currentProc.procNumber);
         insts.add("send_flush(peer, cq, conn, true);");
-
-        visitChildren(ctx);
-        return null;
+        //TODO: fix code
+        throw new RuntimeException("not implemented yet");
+        //.visitChildren(ctx);
+        //return null;
     }
 
     @Override
@@ -90,7 +94,6 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
         String writeVar = ctx.Identifier().getText();
         String rhs = ctx.rhs().getText();
-        String writeAtomicity = ctx.atomicity().getText();
 
         String newInst = String.format("*%s = %s;", writeVar, rhs);
         insts.add(newInst);
@@ -104,12 +107,12 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
         String lhs = ctx.Identifier(0).getText();
         String readVar = ctx.Identifier(1).getText();
-        String readAtomicity = ctx.atomicity().getText();
 
         String newInst = String.format("%s = *%s;", lhs, readVar);
         insts.add(newInst);
+        throw new RuntimeException("not implemented yet");
 
-        return null;
+        //return null;
     }
 
     @Override
@@ -122,8 +125,6 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         String readName = "vr" + counter;
         String writeName = "vw" + counter;
 
-        String writeAtomicity = ctx.atomicity(0).getText();
-        String readAtomicity = ctx.atomicity(1).getText();
 
         String newInst = String.format
 	    ("rdma_operation(app, conn, *conn->peer_mr, %s - vars, %s, conn->rdma_mr, IBV_WR_RDMA_READ, 0);", readVar, writeVar);
@@ -151,14 +152,13 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         String readName = "vr" + counter;
         String writeName = "vw" + counter;
 
-        String writeAtomicity = ctx.atomicity(0).getText();
-        String readAtomicity = ctx.atomicity(1).getText();
 
         String newInst = String.format
                 ("rdma_operation(app, conn, *conn->peer_mr, %s - vars, %s, conn->rdma_mr, IBV_WR_RDMA_WRITE, 0);", writeVar, readVar);
         insts.add(newInst);
+        throw new RuntimeException("not implemented yet");
 
-        return null;
+        //return null;
     }
 
     @Override
@@ -201,15 +201,13 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         String rwName = "vrw" + counter;
         String readName = "vr" + counter;
 
-        String writeAtomicity = ctx.atomicity(0).getText();
-        String rwAtomicity = ctx.atomicity(1).getText();
-        String readAtomicity = ctx.atomicity(2).getText();
 
         String newInst = String.format
             ("rdma_operation_rga(app, conn, *conn->peer_mr, %s - vars, %s, conn->rdma_mr, *%s);", rwVar, writeVar, readVar);
         insts.add(newInst);
+        throw new RuntimeException("not implemented yet");
 
-        return null;
+        //return null;
     }
  
     @Override

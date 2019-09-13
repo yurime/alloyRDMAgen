@@ -38,7 +38,7 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
 //        varsVisitor.visit(tree);
     }
 
-//    public void incorporateOriginalIR(PrintStream os) throws java.io.IOException {
+    public void incorporateOriginalIR(PrintStream os) throws java.io.IOException {
 //        BufferedReader br = new BufferedReader(new FileReader(inputFileName));
 //        String s = null;
 //        while ((s = br.readLine()) != null) {
@@ -50,9 +50,10 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
 //		os.println(s);
 //        }
 //        br.close();
-//    }
+    	throw new RuntimeException("not implemented yet");
+    }
 //
-//    public void incorporateSharedVarDecls(PrintStream os) throws java.io.IOException {
+    public void incorporateSharedVarDecls(PrintStream os) throws java.io.IOException {
 //        Set<Var> allVars = new HashSet<Var>();
 //        /* counters for the observed outputs of the program */
 //        for (int i = 0; i < instanceValue.outputs.size(); i++) {
@@ -69,18 +70,20 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
 //        for (Var v : allVars) {
 //            os.printf("long long * %s;\n", v.name, instanceValue.varNameToIndex.get(v.name));
 //        }
-//    }
+    	throw new RuntimeException("not implemented yet");
+    }
 //
-//    void emitVarPointerAssigns(PrintStream os, Proc p) throws java.io.IOException {
+    void emitVarPointerAssigns(PrintStream os, Proc p) throws java.io.IOException {
 //	for (Var v : varsValue.procToShared.get(p)) {
 //	    os.printf("    %s = &vars[%d];\n", v.name,
 //		      instanceValue.varNameToIndex.get(v.name));
 //	}
 //	if (p.procNumber > 1) {
 //	}
-//    }
+    	throw new RuntimeException("not implemented yet");
+    }
 //
-//    public void incorporateSharedVars(PrintStream os) throws java.io.IOException {
+    public void incorporateSharedVars(PrintStream os) throws java.io.IOException {
 //	os.printf("  all_failed = &vars[0];\n");
 //	os.printf("  if (app == CLIENT) {\n");
 //	os.printf("    client_state = &vars[1];\n");
@@ -99,9 +102,10 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
 //	    os.printf("  %s = &vars[%d];\n", v.name,
 //		      instanceValue.varNameToIndex.get(v.name));
 //	}
-//    }
+    	throw new RuntimeException("not implemented yet");
+   }
 //
-//    public void incorporateLocalDecls(PrintStream os) throws java.io.IOException {
+    public void incorporateLocalDecls(PrintStream os) throws java.io.IOException {
 //        StringBuilder vars = new StringBuilder();
 //        for (Proc p : instanceValue.processes) {
 //            for (Var v : varsValue.procToLocal.get(p)) {
@@ -120,16 +124,18 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
 //	    }
 //	}
 //	return allVars.size();
-//    }
+    	throw new RuntimeException("not implemented yet");
+    }
 //
-//    void emitInitialValues(PrintStream os, Proc p) throws java.io.IOException {
+    void emitInitialValues(PrintStream os, Proc p) throws java.io.IOException {
 //	for (Var v : varsValue.procToShared.get(p)) {
 //	    if (v.hasInitialValue)
 //		os.printf("    *%s = %d;\n", v, v.iv);
 //	}
-//    }
+    	throw new RuntimeException("not implemented yet");
+    }
 //
-//    public void incorporateTestInit(PrintStream os) throws java.io.IOException {
+    public void incorporateTestInit(PrintStream os) throws java.io.IOException {
 //        boolean haveTwo = (instanceValue.processes.size() > 1);
 //
 //        if (haveTwo) {
@@ -141,16 +147,18 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
 //        } else {
 //            emitInitialValues(os, new Proc(0));
 //        }
-//    }
+    	throw new RuntimeException("not implemented yet");
+    }
 //
-//    void emitPerProcTestBody(PrintStream os, Proc p) throws java.io.IOException {
+    void emitPerProcTestBody(PrintStream os, Proc p) throws java.io.IOException {
 //	for (String s : instanceValue.processContents.get(p.procNumber)) {
 //	    os.println("    if (rand() % 2 == 1) { usleep(1); }");
 //	    os.println("    " + s);
 //	}
-//    }
+    	throw new RuntimeException("not implemented yet");
+    }
 //
-//    public void incorporateTestBody(PrintStream os) throws java.io.IOException {
+    public void incorporateTestBody(PrintStream os) throws java.io.IOException {
 //        boolean haveTwo = (instanceValue.processes.size() > 1);
 //
 //        if (haveTwo) {
@@ -164,22 +172,24 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
 //        } else {
 //            emitPerProcTestBody(os, new Proc(0));
 //        }
-//    }
+
+    	throw new RuntimeException("not implemented yet");
+    }
 //
-//    private String checkThread(int nrProcs, int procId) {
+    private String checkThread(int nrProcs, int procId) {
 //        if (nrProcs == 1) {
 //            return "(1)";
 //        } else {
 //            return String.format("(app == %s)", procId == 0 ? "CLIENT" : "SERVER");
 //        }
-//    }
+    	throw new RuntimeException("not implemented yet");
+    }
 //
 public void incorporateTestWitnesses(PrintStream os) throws java.io.IOException {
         boolean firstVar = true;
-        for (Node n : instanceValue.nodes) {
-            if (!varsValue.procToLocal.get(p).isEmpty()) {
-            	for (Proc p : instanceValue.processes) {
-		            if (!varsValue.procToLocal.get(p).isEmpty()) {
+ //       for (Node n : instanceValue.nodes) {
+//          	for (Proc p : instanceValue.processes) {
+		 //           if (!varsValue.procToLocal.get(p).isEmpty()) {
 		//                os.printf("  if %s {\n",
 		//                        checkThread(instanceValue.processes.size(), p.procNumber));
 		//                for (Var v : varsValue.procToLocal.get(p)) {
@@ -190,12 +200,11 @@ public void incorporateTestWitnesses(PrintStream os) throws java.io.IOException 
 		//                        os.printf("    *%s_global = %s;\n", v, v);
 		//                        os.printf("    rdma_operation(app, conn, *conn->peer_mr, %s_global - vars, %s_global, conn->rdma_mr, IBV_WR_RDMA_WRITE, 0);\n", v, v);
 		//                    }
-		                }
-		                os.printf("  }\n");
-		            }
+		//                }
+		//                os.printf("  }\n");
+	//	            }
 		
-	        }
-        }
+//        }
 //
 //	os.printf("  send_flush(peer, cq, conn, true);\n");
 //	os.printf("#if DUMP_VARS\n");
@@ -223,10 +232,11 @@ public void incorporateTestWitnesses(PrintStream os) throws java.io.IOException 
 //	    os.printf("    printf(\"values: %s\\n\"%s);\n", varFormats.toString(), varNames.toString());
 //	    os.printf("  }\n");
 //	}
-os.printf("#endif\n");
+	os.printf("#endif\n");
+	throw new RuntimeException("not implemented yet");
 }
 //
-//    public void incorporateTestCollate(PrintStream os) throws java.io.IOException {
+    public void incorporateTestCollate(PrintStream os) throws java.io.IOException {
 //        boolean firstVar = true;
 //        StringBuilder varFormats = new StringBuilder(),
 //            varNames = new StringBuilder();
@@ -321,7 +331,9 @@ os.printf("#endif\n");
 //            System.exit(1);
 //        }
 //        return null;
-//    }
+
+    	throw new RuntimeException("not implemented yet");
+    }
 //
 //    public Object visitRhs(TLParser.RhsContext ctx) {
 //        if (ctx.Number() != null) {
@@ -332,7 +344,7 @@ os.printf("#endif\n");
 //        return null;
 //    }
 //
-//    public void incorporateStats(PrintStream os) throws java.io.IOException {
+    public void incorporateStats(PrintStream os) throws java.io.IOException {
 //        /* print the execution outputs */
 //
 //        os.printf("    if %s {\n", checkThread(instanceValue.processes.size(), 0));
@@ -342,7 +354,9 @@ os.printf("#endif\n");
 //        }
 //	os.printf("        fprintf(stderr, \"unexpected count %%ld\\n\", unexpected_cnt);\n");
 //        os.printf("    }\n");
-//    }
+
+    	throw new RuntimeException("not implemented yet");
+    }
 //
     public void macroExpand(PrintStream os, int payload, String outputName) throws java.io.IOException {
         switch (payload) {
