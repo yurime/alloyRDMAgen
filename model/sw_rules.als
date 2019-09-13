@@ -165,9 +165,11 @@ iff
   (some na1:nA,sx:Sx { //sx->na1->na2 ---pol_cq_sw---> pcq
       (na2 in instr_sw[na1] ) and 
       (na1 in instr_sw[sx] ) and
+      sameOandD[pcq,sx] and
       (pcq in sx.po_tc) and
           (// num act submitted = num actions acknowledged
-           #(sx.^~po_tc & Sx) = #(pcq.^~po_tc & poll_cq)
+           #(sx.^~po_tc & {a:Sx | sameOandD[a,sx]}) 
+                = #(pcq.^~po_tc & {a:poll_cq | sameOandD[a,pcq]})
            )
   }//end of some na1,sx
   )

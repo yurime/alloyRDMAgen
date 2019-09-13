@@ -72,25 +72,27 @@ sig Sx_rga extends Sx {}
 
 fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
 fact {all sx: Sx| (sx in RDMAaction)}
-
+fact {all sx: Sx| remoteMachineAction[sx]}
 /*CPU read*/
 sig R extends LocalCPUaction{
    reg : one Register
 }
 fact {all r:R| r in Reader and not(r in Writer)}
 fact {all a:R| not(a in RDMAaction)}
-//fact {all disj a, b: R|
-//				not (reg[a] = reg[b])}
+fact {all disj a, b: R|
+				not (reg[a] = reg[b])}
+fact {all a:R| localMachineAction[a]}
 /*CPU write*/
 sig W extends LocalCPUaction{}
 fact {all w:W| w in Writer and not(w in Reader)}
 fact {all a:W| not(a in RDMAaction)}
+fact {all a:W| localMachineAction[a]}
 
 /*c-atomics*/
 sig U extends LocalCPUaction {}
 fact {all u:U| u in Writer and u in Reader}
 fact {all a:U| not(a in RDMAaction)}
-
+fact {all a:U| localMachineAction[a]}
 /*NIC action*/
 abstract sig nA extends Action{
 	instr : one Instruction,
@@ -146,7 +148,7 @@ sig poll_cq extends LocalCPUaction {
 }
 fact {all p:poll_cq| not(p in Writer) and not (p in Reader)}
 fact {all a:poll_cq| not (a in RDMAaction)}
-
+fact {all a:poll_cq| remoteMachineAction[a]}
 /* RDMA instructions and the actions that compose them*/
 abstract sig Instruction {
 	actions: set Sx+nA
@@ -162,9 +164,11 @@ sig Put extends Instruction {}{
   #(actions & Sx_put) = 1 and 
   #(actions & nRp) = 1 and 
   #(actions & nWpq) = 1    and 
-  (let nrp=actions & nRp,
+  (let sx= actions&Sx,
+   nrp=actions & nRp,
       nwpq=actions & nWpq{
-       rV[nrp] = wV[nwpq]
+       rV[nrp] = wV[nwpq] and
+		sameOandD[sx,nwpq]
    })
 }
 
@@ -173,9 +177,11 @@ sig Get extends Instruction {}{
   #(actions & Sx_get) = 1 and 
   #(actions & nRpq) = 1 and 
   #(actions & nWp) = 1   and 
-  (let nrpq=actions & nRpq,
+  (let sx= actions&Sx,
+   nrpq=actions & nRpq,
       nwp=actions & nWp{
-       rV[nrpq] = wV[nwp]
+       rV[nrpq] = wV[nwp] and
+		sameOandD[sx,nrpq]
    })
 }
 
@@ -184,9 +190,11 @@ sig Rga extends Instruction {}{
   #(actions & Sx_rga) = 1 and 
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1  and 
-  (let nrwpq=actions & nRWpq,
+  (let sx= actions&Sx,
+   nrwpq=actions & nRWpq,
       nwp=actions & nWp{
-       rV[nrwpq] = wV[nwp]
+       rV[nrwpq] = wV[nwp] and
+		sameOandD[sx,nrwpq]
    })
 }
 
@@ -195,9 +203,11 @@ sig Cas extends Instruction {}{
   #(actions & Sx_cas) = 1 and 
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1   and 
-  (let nrwpq=actions & nRWpq,
+  (let sx= actions&Sx,
+   nrwpq=actions & nRWpq,
       nwp=actions & nWp{
-       rV[nrwpq] = wV[nwp]
+       rV[nrwpq] = wV[nwp] and
+		sameOandD[sx,nrwpq]
    })
 }
 
@@ -208,9 +218,11 @@ sig PutF extends Instruction {}{
   #(actions & nF) = 1 and 
   #(actions & nRp) = 1 and 
   #(actions & nWpq) = 1   and 
-  (let nrp=actions & nRp,
+  (let sx= actions&Sx,
+   nrp=actions & nRp,
       nwpq=actions & nWpq{
-       rV[nrp] = wV[nwpq]
+       rV[nrp] = wV[nwpq] and
+		sameOandD[sx,nwpq]
    })
 }
 sig GetF extends Instruction {}{
@@ -219,9 +231,11 @@ sig GetF extends Instruction {}{
   #(actions & nF) = 1 and  
   #(actions & nRpq) = 1 and 
   #(actions & nWp) = 1 and 
-  (let nrqp=actions & nRpq,
+  (let  sx= actions&Sx,
+   nrpq=actions & nRpq,
         nwp=actions & nWp{
-    rV[nrqp] = wV[nwp]
+    rV[nrpq] = wV[nwp] and
+		sameOandD[sx,nrpq]
    })
 }
 sig RgaF extends Instruction {}{
@@ -230,9 +244,11 @@ sig RgaF extends Instruction {}{
   #(actions & nF) = 1 and  
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1   and 
-  (let nrwpq=actions & nRWpq,
+  (let sx= actions&Sx,
+   nrwpq=actions & nRWpq,
       nwp=actions & nWp{
-       rV[nrwpq] = wV[nwp]
+       rV[nrwpq] = wV[nwp] and
+		sameOandD[sx,nrwpq]
    })
 }
 
@@ -242,9 +258,11 @@ sig CasF extends Instruction {}{
   #(actions & nF) = 1 and   
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1  and 
-  (let nrwpq=actions & nRWpq,
+  (let sx= actions&Sx,
+   nrwpq=actions & nRWpq,
       nwp=actions & nWp{
-       rV[nrwpq] = wV[nwp]
+       rV[nrwpq] = wV[nwp] and
+		sameOandD[sx,nrwpq]
    })
 }
 
@@ -279,7 +297,6 @@ fact {po_tc=^po_tc}
 fact {po_tc=~copo}
 fact{not cyclic[po_tc]}
 fact{all a,b:Action| b in a.po iff ((b in a.po_tc) and #(a.po_tc - b.po_tc)=1)} // for displaying po. 
-fact {all a: LocalCPUaction| localMachineAction[a]}
 fact {all disj a,b: LocalCPUaction| 
                                       (o[a] = o[b])
                                       iff

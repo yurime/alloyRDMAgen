@@ -17,13 +17,14 @@ mo_next: Writer->lone Writer,
  hb: Action-> set Action,
  hbqp: Action->set Action,
  hbs: Action->set Action,
- Robust: Boolean
+ Consistent: Boolean
+{all i:Init, a:Writer-Init| not i in mo[a]}
 }{
   {
    (hb_cyclic  or cyclic_MoThenHbs or readAndMissPrevWriteInHbs
    or tsoBufferCoherence1of3 or tsoBufferCoherence2of3  
    or tsoBufferCoherence3of3  or tsoFenceViolation)
-   implies Robust=False else Robust=True
+   implies Consistent=False else Consistent=True
   }
 {all w1,w2:Writer | w1 in w2.mo_next <=> (w1 in w2.mo and #(w2.mo-w1.mo)=1)}
 }

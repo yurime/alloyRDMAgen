@@ -80,14 +80,14 @@ fact{all disj r1,r2:R| not reg[r1]=reg[r2]}
 sig Dummy {}
 fact { no Dummy }
 
-fact{RDMAExecution_prime.Robust=True}
+fact{RDMAExecution_prime.Consistent=True}
 
 
 pred oneThread { #Thr = 1 }
 pred twoThreads { #Thr = 2 }
 
 // sanity
-//check {RDMAExecution.Robust=False} expect 0
+//check {RDMAExecution.Consistent=False} expect 0
 
 /* Properties of the test */
 pred show { 

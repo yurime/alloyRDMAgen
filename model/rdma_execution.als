@@ -28,7 +28,7 @@ one sig RDMAExecution extends Execution{
 
 //mo_s definition
    mos in mo
-  {all w1,w2:Writer| w2 in w1.mos iff w1 in nRWpq+U+nWp}
+  {all w1:Writer| all w2:w1.mo| w2 in w1.mos iff w1 in nRWpq+U+nWp}
 
 //hbs definition 
   hbs=^(hbqp+mos)

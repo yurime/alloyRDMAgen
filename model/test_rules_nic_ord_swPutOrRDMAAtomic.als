@@ -33,7 +33,7 @@ fact{all a:nA|
 
 
 /* Execution.hbs is cyclic, and the reader pivot is involved in the cycle */
-//fact {RDMAExecution.Robust=False 
+//fact {RDMAExecution.Consistent=False 
 //         and {let e=RDMAExecution | nA1Pivot+Witness in nA2Pivot.(e.hbs + e.mo)}
 //}
 
