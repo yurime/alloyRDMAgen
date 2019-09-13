@@ -6,6 +6,8 @@ import java.util.Stack;
 /**
  * Created by Andrei on 8/28/15.
  * Modified by Yuri 09/2019
+ * Builds a formula for sat4j (that will later be printed to file) while traversing the 
+ * build by the parser (on ir code)
  */
 public class TranslateVisitor extends TLBaseVisitor<Object> {
     Stack<List<String>> actions_in_ifs;
@@ -151,80 +153,77 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         return null;
     }
 
-//    public Object visitLoad(TLParser.LoadContext ctx) {
-//        String lhs = ctx.Identifier(0).getText();
-//        String readVar = ctx.Identifier(1).getText();
-//        String readAtomicity = ctx.atomicity().getText();
-//        String loadName = "lr" + counter;
-//
-//        result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
-//        if (if_context_counter == 0) {
-//
-//            condAppend(readAtomicity.equals("atm"), loadName, result.ARead, result.NRead);
-//        } else {
-//
-//            appendVarToBuffer(loadName, result.Items);
-//            condTypePrint(readAtomicity.equals("atm"), loadName, "ARead", "NRead");
-//            actions_in_ifs.peek().add(loadName);
-//        }
-//
-//        result.programBuffer.append("\n and o[" + loadName + "] = p" + currentProcNumber +
-//                "\n and d[" + loadName + "] = p" + currentProcNumber +
-//                "\n and rl[" + loadName + "] = " + readVar +
-//                "\n and reg[" + loadName + "] = " + encodeVarName(lhs));
-//        appendPOtoProg(loadName, loadName);
-//        this.result.actionsNumber++;
-//        this.counter++;
-//
-//        return null;
-//    }
+    public Object visitLoad(TLParser.LoadContext ctx) {
+        String lhs = ctx.Identifier(0).getText();
+        String readVar = ctx.Identifier(1).getText();
+        String loadName = "lr" + counter;
 
-//    public Object visitGet(TLParser.GetContext ctx) {
-//        int destProcessNumber = Integer.parseInt(ctx.Number().getText());
-//        String writeVar = ctx.Identifier(0).getText();
-//        String readVar = ctx.Identifier(1).getText();
-//        String readName = "vr" + counter;
-//        String writeName = "vw" + counter;
-//
-//        String writeAtomicity = ctx.atomicity(0).getText();
-//        String readAtomicity = ctx.atomicity(1).getText();
-//
-//        result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
-//
-//        if (if_context_counter == 0) {
-//
-//            condAppend(readAtomicity.equals("atm"), readName, result.ARemoteRead, result.NRemoteRead);
-//            condAppend(writeAtomicity.equals("atm"), writeName, result.AExternWrite, result.NExternWrite);
-//        } else {
-//
-//            appendVarToBuffer(readName, result.Items);
-//            appendVarToBuffer(writeName, result.Items);
-//            condTypePrint(readAtomicity.equals("atm"), readName, "ARemoteRead", "NRemoteRead");
-//            condTypePrint(writeAtomicity.equals("atm"), writeName, "AExternWrite", "NExternWrite");
-//            actions_in_ifs.peek().add(readName);
-//            actions_in_ifs.peek().add(writeName);
-//        }
-//
-//        result.programBuffer.append("\n and o[" + readName + "] = p" + currentProcNumber +
-//                "\n and d[" + readName + "] = p" + destProcessNumber +
-//                "\n and rl[" + readName + "] = " + readVar +
-//                "\n and " + readName + " in eactions[" + readName + "]" +
-//                "\n and " + writeName + " in eactions[" + readName + "]" +
-//                "\n and #eactions[" + readName + "] = 2" +
-//                "\n and o[" + writeName + "] = p" + currentProcNumber +
-//                "\n and d[" + writeName + "] = p" + currentProcNumber +
-//                "\n and wl[" + writeName + "] = " + writeVar +
-//                "\n and " + writeName + " in po[" + readName + "]" +
-//                "\n and " + writeName + " in co[" + readName + "]" +
-//                "\n and wV[" + writeName + "] = rV[" + readName + "]");
-//        appendPOtoProg(readName, writeName);
-//        this.result.actionsNumber++;
-//        this.result.actionsNumber++;
-//        this.counter++;
-//
-//        return null;
-//    }
-//
+        result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
+        if (if_context_counter == 0) {
+
+            condAppend(loadName, result.actionR);
+        } else {
+
+            appendVarToBuffer(loadName, result.Items);
+            condTypePrint(loadName, "Read");
+            actions_in_ifs.peek().add(loadName);
+        }
+
+        result.programBuffer.append("\n and o[" + loadName + "] = p" + currentProcNumber +
+                "\n and d[" + loadName + "] = p" + currentProcNumber +
+                "\n and rl[" + loadName + "] = " + readVar +
+                "\n and reg[" + loadName + "] = " + encodeVarName(lhs));
+        appendPOtoProg(loadName, loadName);
+        this.result.actionsNumber++;
+        this.counter++;
+
+        return null;
+    }
+
+    public Object visitGet(TLParser.GetContext ctx) {
+        int destProcessNumber = Integer.parseInt(ctx.Number().getText());
+        String writeVar = ctx.Identifier(0).getText();
+        String readVar = ctx.Identifier(1).getText();
+        String readName = "vr" + counter;
+        String writeName = "vw" + counter;
+        
+        result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
+
+        if (if_context_counter == 0) {
+
+            condAppend(readName, result.actionSx);
+            condAppend(readName, result.actionRpq);
+            condAppend(readName, result.actionWp);
+        } else {
+
+            appendVarToBuffer(readName, result.Items);
+            appendVarToBuffer(writeName, result.Items);
+            condTypePrint(readName, "Read");
+            condTypePrint(writeName, "ExternWrite");
+            actions_in_ifs.peek().add(readName);
+            actions_in_ifs.peek().add(writeName);
+        }
+
+        result.programBuffer.append("\n and o[" + readName + "] = p" + currentProcNumber +
+                "\n and d[" + readName + "] = p" + destProcessNumber +
+                "\n and rl[" + readName + "] = " + readVar +
+                "\n and " + readName + " in eactions[" + readName + "]" +
+                "\n and " + writeName + " in eactions[" + readName + "]" +
+                "\n and #eactions[" + readName + "] = 2" +
+                "\n and o[" + writeName + "] = p" + currentProcNumber +
+                "\n and d[" + writeName + "] = p" + currentProcNumber +
+                "\n and wl[" + writeName + "] = " + writeVar +
+                "\n and " + writeName + " in po[" + readName + "]" +
+                "\n and " + writeName + " in co[" + readName + "]" +
+                "\n and wV[" + writeName + "] = rV[" + readName + "]");
+        appendPOtoProg(readName, writeName);
+        this.result.actionsNumber++;
+        this.result.actionsNumber++;
+        this.counter++;
+
+        return null;
+    }
+
 //    public Object visitPut(TLParser.PutContext ctx) {
 //        int destProcessNumber = Integer.parseInt(ctx.Number().getText());
 //        String writeVar = ctx.Identifier(0).getText();

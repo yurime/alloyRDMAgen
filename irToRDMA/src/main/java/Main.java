@@ -26,37 +26,37 @@ class MyErrorListener extends BaseErrorListener {
 }
 
 public class Main {
-//    // recieves an alloy file and
+//    // receives an alloy file and
 //	// 1. generates all results.
-//    public static void getAssumptions(String inputFileName) {
-//        /* Parse input program */
-//
-//        MyErrorListener listener = new MyErrorListener();
-//
-//        try {
-//
-//            TLLexer lexer = new TLLexer(new ANTLRFileStream(inputFileName));
-//
-//            TLParser parser = new TLParser(new CommonTokenStream(lexer));
-//
-//            parser.setBuildParseTree(true);
-//            //parser.removeErrorListeners();
-//            //parser.addErrorListener(listener);
-//            ParseTree tree = parser.parse();
-//
-//        /* Generate program in Alloy */
-//
-//            TranslateValue translateValue = new TranslateValue();
-//            TranslateVisitor translateVisitor = new TranslateVisitor(translateValue);
-//            translateVisitor.visit(tree);
-//
-//            String outFileName = inputFileName + ".als";
-//            BufferedWriter out = new BufferedWriter(new FileWriter(outFileName));
-//
-//            out.write(translateValue.toString(0, null));
-//            out.close();
-//
-//        /* Loop to determine all possible outcomes */
+    public static void getAssumptions(String inputFileName) {
+        /* Parse input program */
+
+        MyErrorListener listener = new MyErrorListener();
+
+        try {
+
+            TLLexer lexer = new TLLexer(new ANTLRFileStream(inputFileName));
+
+            TLParser parser = new TLParser(new CommonTokenStream(lexer));
+
+            parser.setBuildParseTree(true);
+            parser.removeErrorListeners();
+            parser.addErrorListener(listener);
+            ParseTree tree = parser.parse();
+
+        /* Generate program in Alloy */
+
+            TranslateValue translateValue = new TranslateValue();
+            TranslateVisitor translateVisitor = new TranslateVisitor(translateValue);
+            translateVisitor.visit(tree);
+
+            String outFileName = inputFileName + ".als";
+            BufferedWriter out = new BufferedWriter(new FileWriter(outFileName));
+
+            out.write(translateValue.toString(0, null));
+            out.close();
+
+        /* Loop to determine all possible outcomes */
 //            HashMap<String, Integer> locals = null;
 //            int cnt = 0;
 //            String constraint = "";
@@ -99,13 +99,13 @@ public class Main {
 //            BufferedWriter br = new BufferedWriter(new FileWriter(inputFileName, true));
 //            br.append(result.toString());
 //            br.close();
-//
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//
-//    }
-//
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
 //    public static Result checkFile(String inputFileName) {
 //
 //        /* Parse input program */
@@ -159,9 +159,20 @@ public class Main {
                 System.exit(1);
             }
 
-//            getAssumptions(args[0]);
+            getAssumptions(args[0]);
 
-           
+            /* Result resultAnalysis = checkFile(args[0]);
+
+            if (resultAnalysis.found_error) {
+                System.out.println("Error: " + resultAnalysis.error_msg);
+            } else {
+                boolean isSat = resultAnalysis.is_sat;
+                if (resultAnalysis.check_robustness) {
+                    System.out.println("Program is " + ((isSat) ? "not " : "") + "robust");
+                } else {
+                    System.out.println("Program " + ((isSat) ? "does not satisfy " : "satisfies ") + "the assertion.");
+                }
+            }*/ 
 
         } catch (Exception e) {
             e.printStackTrace();

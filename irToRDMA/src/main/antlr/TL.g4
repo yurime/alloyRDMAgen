@@ -51,19 +51,19 @@ pollcq
  ;
  
 put
- : Put '(' Identifier '^' 'T' Number ',' Identifier ')'
+ : Put '(' Identifier ','  Number ',' Identifier ')'
  ;
 
 get
- : Identifier '=' Get  '(' Identifier '^' 'T' Number ')'
+ : Identifier '=' Get  '(' Identifier ',' Number ')'
  ;
 
 rga
- : Identifier '=' Rga '(' Identifier '^' 'T' Number ',' Identifier ')'
+ : Identifier '=' Rga '(' Identifier ',' Number ',' Identifier ')'
  ;
 
 cas
- : Identifier '=' Cas '(' Identifier '^' 'T' Number ',' Identifier ',' Identifier ')'
+ : Identifier '=' Cas '(' Identifier ',' Number ',' Identifier ',' Identifier ')'
  ;
 
 rhs

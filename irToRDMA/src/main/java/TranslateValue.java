@@ -5,6 +5,7 @@ import java.util.HashMap;
 
 /**
  * Created by andrei on 8/30/15.
+ * Update by yuri on 09/2019.
  */
 public class TranslateValue {
     StringBuffer programBuffer, actionR, actionW, actionSx, actionRp, actionRpq, actionWp, actionWpq, actionRWpq,
