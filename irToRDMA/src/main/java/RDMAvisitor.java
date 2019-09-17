@@ -165,7 +165,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
     public Object visitCas(TLParser.CasContext ctx) {
         List<String> insts = result.processContents.get(this.currentProc.procNumber);
 
-        int destProcessNumber = Integer.parseInt(ctx.Number().getText());
+        int destProcessNumber = Integer.parseInt(ctx.Number(0).getText());
         String writeVar = ctx.Identifier(0).getText();
         String rwVar = ctx.Identifier(1).getText();
         String r1Var = ctx.Identifier(2).getText();
@@ -193,7 +193,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         // W = rga(RW, R)
         List<String> insts = result.processContents.get(this.currentProc.procNumber);
 
-        int destProcessNumber = Integer.parseInt(ctx.Number().getText());
+        int destProcessNumber = Integer.parseInt(ctx.Number(0).getText());
         String writeVar = ctx.Identifier(0).getText();
 	String rwVar = ctx.Identifier(1).getText();
         String readVar = ctx.Identifier(2).getText();

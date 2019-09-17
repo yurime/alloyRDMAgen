@@ -39,11 +39,11 @@ statement
  ;
 
 load
- :  Identifier '=' Identifier
+ : Load Identifier '=' Identifier
  ;
 
 store
- : Identifier '=' rhs
+ : Store Identifier '=' rhs
  ;
 
 pollcq
@@ -59,11 +59,11 @@ get
  ;
 
 rga
- : Identifier '=' Rga '(' Identifier ',' Number ',' Identifier ')'
+ : Identifier '=' Rga '(' Identifier ',' Number ',' Number ')'
  ;
 
 cas
- : Identifier '=' Cas '(' Identifier ',' Number ',' Identifier ',' Identifier ')'
+ : Identifier '=' Cas '(' Identifier ',' Number ',' Number ')'
  ;
 
 rhs
