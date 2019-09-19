@@ -35,7 +35,9 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
 	  public String toString() {
 			return new String("") + value;
 	  }
-    	  
+	  MutableInt(int value){
+		  this.value = value;
+	  }
 	}
 
     public TranslateVisitor(TranslateValue value) {
@@ -55,6 +57,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
 
         appendVarToBuffer("n" + nodeNumber, result.Nodes);
         result.programBuffer.append("\n/* Node " + nodeNumber + " */\n");
+        result.nodesNumber++;
         visitChildren(ctx);
         return null;
     }
@@ -70,6 +73,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         this.lastRemoteWriteMap = new HashMap<String,String>();
         this.lastLocalReadMap = new HashMap<String,String>();
         this.swSizeMap = new HashMap<>();
+        result.thrsNumber++;
         visitChildren(ctx);
         for(Entry<String, MutableInt> e : swSizeMap.entrySet()) {
             result.programBuffer.append("\n and #sw[" + e.getKey() + "]=" + e.getValue() + "\n");
@@ -89,10 +93,10 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             appendVarToBuffer(writeVar, result.MemoryLocation);
 
             result.programBuffer.append("\n /* " + vCtx.getText() + " */ \n");
-            result.programBuffer.append("\n and o[" + initValName + "] = p" + currentNodeNumber +
+            result.programBuffer.append("\n and o[" + initValName + "] = p" + currentProcNumber +
                                         "\n and wl[" + initValName + "] = " + writeVar +
                                         "\n and wV[" + initValName + "] = " + rhs +
-                                        "\n and host[" + writeVar + "] = " + writeVar + "\n");
+                                        "\n and host[" + writeVar + "] = n" + currentNodeNumber + "\n");
             this.counter++;
         }
 
@@ -127,7 +131,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
   
     private void appendPOtoProg(String actionName) {
         if (this.lastActionName != null) {
-            result.programBuffer.append("\n and " + actionName + " in po[" + this.lastActionName + "]\n");
+            result.programBuffer.append("\n and " + actionName + " = po[" + this.lastActionName + "]\n");
         }
         this.lastActionName = actionName;
     }
@@ -257,8 +261,8 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String rpqName = "vrpq" + counter;
         String wpName = "vwp" + counter;
         
-        this.swSizeMap.put(wpName, new MutableInt()); // starts of with 1
-        this.swSizeMap.put(rpqName, new MutableInt()); // starts of with 1
+        this.swSizeMap.put(wpName, new MutableInt(0));
+        this.swSizeMap.put(rpqName, new MutableInt(1));
         
         result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
 
@@ -292,8 +296,6 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
                 "\n and d[" + wpName + "] = p" + currentProcNumber +
                 "\n and " + wpName + " in sw[" + rpqName + "]//nic-inst-sw" +
                 "\n and wl[" + wpName + "] = " + writeVar +
-                "\n and " + wpName + " in po[" + rpqName + "]" +
-                "\n and " + wpName + " in co[" + rpqName + "]" +
                 "\n and wV[" + wpName + "] = rV[" + rpqName + "]");
         appendGetToOrdSw(rpqName,targetProcess);
         addUnpolledAction(targetProcess, wpName);
@@ -320,8 +322,8 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String rpName = "vrp" + counter;
         String wpqName = "vwpq" + counter;
         
-        this.swSizeMap.put(wpqName, new MutableInt()); // starts of with 1
-        this.swSizeMap.put(rpName, new MutableInt()); // starts of with 1
+        this.swSizeMap.put(wpqName, new MutableInt(0)); 
+        this.swSizeMap.put(rpName, new MutableInt(1));
 
         result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
 
@@ -376,8 +378,8 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String wpName = "vw" + counter;
 
 
-        this.swSizeMap.put(rwpqName, new MutableInt()); // starts of with 1
-        this.swSizeMap.put(wpName, new MutableInt()); // starts of with 1
+        this.swSizeMap.put(rwpqName, new MutableInt(1));
+        this.swSizeMap.put(wpName, new MutableInt(0)); 
 
         result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
 
@@ -412,9 +414,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
                 "\n and o[" + wpName + "] = p" + currentProcNumber +
                 "\n and d[" + wpName + "] = p" + currentProcNumber +
                 "\n and wl[" + wpName + "] = " + writeVar +
-                "\n and wV[" + wpName + "] = rV[" + rwpqName + "]" +
-                "\n and " + wpName + " in po[" + rwpqName + "]" +
-                "\n and " + wpName + " in co[" + rwpqName + "]");
+                "\n and wV[" + wpName + "] = rV[" + rwpqName + "]");
         
 		appendRgaToOrdSw(rwpqName, targetProcess);
         addUnpolledAction(targetProcess, wpName);
@@ -437,8 +437,8 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String rwpqName = "vrwpq" + counter;
         String wpName = "vw" + counter;
 
-        this.swSizeMap.put(rwpqName, new MutableInt()); // starts of with 1
-        this.swSizeMap.put(wpName, new MutableInt()); // starts of with 1
+        this.swSizeMap.put(rwpqName, new MutableInt(1)); 
+        this.swSizeMap.put(wpName, new MutableInt(0));
         
         result.programBuffer.append("\n /*" + ctx.getText() + " */ \n");
 
@@ -497,6 +497,17 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
 
         result.programBuffer.append("\n /*" + ctx.getText() + " */ \n");
         
+        if (if_context_counter == 0) {
+            condAppend(pcqName, result.actionPollCQ);
+        } else {
+            appendVarToBuffer(pcqName, result.Items);
+
+            condTypePrint(pcqName, "poll_cq");
+
+            actions_in_ifs.peek().add(pcqName);
+        }
+        
+         
         if (!this.unpolled_actions.containsKey(targetProcess)) {
         	throw new RuntimeException("Reached a poll_cq with no previous rdma operations");
         }
@@ -508,6 +519,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         result.programBuffer.append("\n and " + pcqName + " in sw[" + unpolled + "]//poll-cq-sw\n");
         incInSwSizeMap(unpolled);
         appendPOtoProg(pcqName);
+        this.result.actionsNumber++;
         
         return null;    	
     }

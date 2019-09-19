@@ -11,10 +11,14 @@ public class TranslateValue {
     StringBuffer programBuffer, actionR, actionW, actionSx, actionRp, actionRpq, actionWp, actionWpq, actionRWpq,
                  MemoryLocation, Processes, Nodes, InitialValue, actionPollCQ, Integers, Assertion, Items;
     int actionsNumber;
+	int nodesNumber;
+	int thrsNumber;
     boolean check_robustness;
 
     public TranslateValue() {
         this.actionsNumber = 0;
+        this.nodesNumber = 0;
+        this.thrsNumber = 0;
         this.programBuffer = new StringBuffer();
         this.actionR = new StringBuffer();
         this.actionW = new StringBuffer();
@@ -45,47 +49,52 @@ public class TranslateValue {
         result.append("pred Test [] {\n");
         result.append(" some ");
         if (InitialValue.length() > 0) {
-            result.append("disj " + InitialValue.toString() + ": InitialValue,\n");
+            result.append("disj " + InitialValue.toString() + ": Init,\n");
         }
         if (Integers.length() > 0) {
             result.append("disj " + Integers.toString() + ": Register,\n");
         }
         if (actionR.length() > 0) {
-            result.append("disj " + actionR.toString() + ": action R,\n");
+            result.append("disj " + actionR.toString() + ":  R,\n");
         }
         if (actionW.length() > 0) {
             result.append("disj " + actionW.toString() + ": (Write - InitialValue),\n");
         }
+        if (actionSx.length() > 0) {
+            result.append("disj " + actionSx.toString() + ":  Sx,\n");
+        }
         if (actionRp.length() > 0) {
-            result.append("disj " + actionRp.toString() + ": action R^p,\n");
+            result.append("disj " + actionRp.toString() + ":  nRp,\n");
         }
         if (actionRpq.length() > 0) {
-            result.append("disj " + actionRpq.toString() + ": action R^{p-->q},\n");
+            result.append("disj " + actionRpq.toString() + ":  nRpq,\n");
         }
         
         if (actionWp.length() > 0) {
-            result.append("disj " + actionWp.toString() + ": action W^p,\n");
+            result.append("disj " + actionWp.toString() + ":  nWp,\n");
         }
         if (actionWpq.length() > 0) {
-            result.append("disj " + actionWpq.toString() + ": action W^{p-->q},\n");
+            result.append("disj " + actionWpq.toString() + ":  nWpq,\n");
         }
         if (actionRWpq.length() > 0) {
-            result.append("disj " + actionRWpq.toString() + ": action RW^{p-->q},\n");
+            result.append("disj " + actionRWpq.toString() + ":  nRWpq,\n");
         }
         if (actionPollCQ.length() > 0) {
-            result.append("disj " + actionPollCQ.toString() + ": action poll_cq^{p-->q},\n");
+            result.append("disj " + actionPollCQ.toString() + ":  poll_cq,\n");
         }
         if (Items.length() > 0) {
-            result.append("disj " + Items.toString() + ": Item,\n");
+            result.append("disj " + Items.toString() + ": Action,\n");
         }
         if (MemoryLocation.length() > 0) {
             result.append("disj " + MemoryLocation.toString() + ": MemoryLocation,\n");
         }
 
-        result.append("disj " + Nodes.toString() + ": Node | \n");
+        result.append("disj " + Nodes.toString() + ": Node,  \n");
         result.append("disj " + Processes.toString() + ": Thr | \n");
 
-        result.append(" #Item = " + actionsNumber + "\n");
+        result.append(" #Action = " + actionsNumber + "\n");
+        result.append("and #Node= " + nodesNumber + "\n");
+        result.append("and #Thr= " + thrsNumber + "\n");
 
         if (propertyFlag > 0) {
             if (Assertion.length() > 0) {

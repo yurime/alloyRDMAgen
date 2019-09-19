@@ -26,8 +26,19 @@ class MyErrorListener extends BaseErrorListener {
 }
 
 public class Main {
-//    // receives an alloy file and
-//	// 1. generates all results.
+	/**  Generates all possible outputs and appends them to the input file.
+	 *<p><b>Pseudo algorithm:</b> 
+	 *  <ol>
+	 *	   <li> Generates a corresponding alloy input file </li>
+	 *	   <li> While there is a result (assignment to registers):<ol>
+	 *      <li> adds to the ir file a possible output result</li>
+	 *      <li> creates a copy of the als file with negation of the result </li>
+	 *      <li> feeds it back to alloy </li>
+	 *     </li></ol>
+	 *  </ol>
+	 *</p>
+	 * @param inputFileName -- an intermediate representation file
+	 **/
     public static void getAssumptions(String inputFileName) {
         /* Parse input program */
 
@@ -57,48 +68,45 @@ public class Main {
             out.close();
 
         /* Loop to determine all possible outcomes */
-//            HashMap<String, Integer> locals = null;
-//            int cnt = 0;
-//            String constraint = "";
-//            StringBuffer result = new StringBuffer();
-//            do {
-//                locals = CheckSat.getLocals(outFileName);
-//                if (locals != null) {
-//                    StringBuffer sb = new StringBuffer();
-//                    sb.append("not (");
-//                    result.append("output(");
-//                    Iterator<String> i = locals.keySet().iterator();
-//                    while (i.hasNext()) {
-//                        String localVar = i.next();
-//                        sb.append("(value[" + localVar + "] = " + locals.get(localVar) + ")");
-//                        result.append("(" + TranslateVisitor.decodeVarName(localVar) + " == " + locals.get(localVar) + ")");
-//                        if (i.hasNext()) {
-//                            sb.append(" and ");
-//                            result.append(" && ");
-//                        }
-//                    }
-//                    sb.append(")");
-//                    result.append(");\n");
-//                    if (constraint.length() > 0) {
-//                        constraint = constraint + " and " + sb.toString();
-//                    } else {
-//                        constraint = sb.toString();
-//                    }
-//                    //System.out.println(sb.toString());
-//                    cnt++;
-//                    outFileName = inputFileName + cnt + ".als";
-//                    out = new BufferedWriter(new FileWriter(outFileName));
-//
-//                    out.write(translateValue.toString(0, constraint));
-//                    out.close();
-//
-//                }
-//            } while (locals != null);
-//
-//
-//            BufferedWriter br = new BufferedWriter(new FileWriter(inputFileName, true));
-//            br.append(result.toString());
-//            br.close();
+            HashMap<String, Integer> locals = null;
+            int cnt = 0;
+            String constraint = "";
+            StringBuffer result = new StringBuffer();
+            locals = CheckSat.getLocals(outFileName);
+            while (locals != null) {
+                StringBuffer sb = new StringBuffer();
+                sb.append("not (");
+                result.append("output(");
+                Iterator<String> i = locals.keySet().iterator();
+                while (i.hasNext()) {
+                	String localVar = i.next();
+                	sb.append("(value[" + localVar + "] = " + locals.get(localVar) + ")");
+                	result.append("(" + TranslateVisitor.decodeVarName(localVar) + " == " + locals.get(localVar) + ")");
+                	if (i.hasNext()) {
+                		sb.append(" and ");
+                		result.append(" && ");
+                	}
+                }
+                sb.append(")");
+                result.append(");\n");
+                if (constraint.length() > 0) {
+                	constraint = constraint + " and " + sb.toString();
+                } else {
+                	constraint = sb.toString();
+                }
+                System.out.println(sb.toString());
+                cnt++;
+                outFileName = inputFileName + cnt + ".als";
+                out = new BufferedWriter(new FileWriter(outFileName));
+            	out.write(translateValue.toString(0, constraint));
+            	out.close();
+            	locals = CheckSat.getLocals(outFileName);
+            } 
+
+
+            BufferedWriter br = new BufferedWriter(new FileWriter(inputFileName, true));
+            br.append(result.toString());
+            br.close();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -106,6 +114,9 @@ public class Main {
 
     }
 
+//   /** receives an alloy file and
+//	  *  2. checks something.. (robustness, or assertion)
+//    **/
 //    public static Result checkFile(String inputFileName) {
 //
 //        /* Parse input program */

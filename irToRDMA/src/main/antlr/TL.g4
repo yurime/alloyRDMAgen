@@ -14,12 +14,12 @@ program
 
 
 node
- : Node Number sharedDecl? process+ 
+ : Node Number process+ 
  ;
 
 
 process
- : Process Number localDecl? statement*
+ : Process Number sharedDecl? localDecl? statement*
  ;
 
 statement
@@ -39,11 +39,11 @@ statement
  ;
 
 load
- : Load Identifier '=' Identifier
+ : Load '(' Identifier '=' Identifier ')'
  ;
 
 store
- : Store Identifier '=' rhs
+ : Store '(' Identifier '=' rhs  ')'
  ;
 
 pollcq

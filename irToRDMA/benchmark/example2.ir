@@ -1,0 +1,31 @@
+node 0
+
+process 0
+shared X = 0;
+local a;
+load (a = X);
+
+
+node 1
+
+process 1
+shared Y = 2, Z = 1;
+local b;
+put (X,0,Y);
+poll_cq (0);
+Z = rga (X,0,1);
+poll_cq (0);
+load (b = Z);
+// ---
+
+//output((a == 2) && (b == 2));
+//output((a == 0) && (b == 2));
+output((a == 2) && (b == 2));
+output((a == 0) && (b == 2));
+output((a == 3) && (b == 2));
+output((a == 2) && (b == 2));
+output((a == 0) && (b == 2));
+output((a == 3) && (b == 2));
+output((a == 0) && (b == 2));
+output((a == 2) && (b == 2));
+output((a == 3) && (b == 2));

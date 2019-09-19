@@ -18,10 +18,12 @@ sig MemoryLocation {
 
 /* Local Variables*/
 sig Register{
-  o: one Thr
+  o: one Thr,
+  value: one Int
 }
 
-fact { all r: Register| o[r] = o[~reg[r]] }
+fact { all r: Register| o[r] = o[~reg[r]]  and 
+								  value[r] = rV[~reg[r]]}
 
 abstract sig Action {
 
@@ -70,8 +72,7 @@ sig R extends LocalCPUaction{
 }
 fact {all r:R| r in Reader and not(r in Writer)}
 fact {all a:R| not(a in RDMAaction)}
-fact {all disj a, b: R|
-				not (reg[a] = reg[b])}
+
 
 /*CPU write*/
 sig W extends LocalCPUaction{}
@@ -246,6 +247,7 @@ one sig RDMAExecution extends Execution{
 
 }// end of sig execution
 
+fact {RDMAExecution.Consistent=True}
 
 pred Test1 [] {
  some disj iv0: Init,
@@ -261,7 +263,6 @@ disj p0: Thr |
  and o[iv0] = p0
  and wl[iv0] = X
  and wV[iv0] = 0
- and RDMAExecution.Consistent=True
 }
 
 run Test1 for 5
