@@ -32,3 +32,10 @@ generateGrammarSource {
 }
 
 
+ext.mainClass = 'org.imdea.software.Main'
+ext.cliargs = ['../benchmark/example2.ir']
+task run(type:JavaExec) {
+    main = mainClass
+    classpath = sourceSets.main.runtimeClasspath
+    args = cliargs
+}
