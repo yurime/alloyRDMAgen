@@ -1,4 +1,3 @@
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -30,7 +29,7 @@ public class Main {
 	 *<p><b>Pseudo algorithm:</b> 
 	 *  <ol>
 	 *	   <li> Generates a corresponding alloy input file </li>
-	 *	   <li> While there is a result (assignment to registers):<ol>
+	 *	   <li> While there is a result (a satisfying assignment to registers):<ol>
 	 *      <li> adds to the ir file a possible output result</li>
 	 *      <li> creates a copy of the als file with negation of the result </li>
 	 *      <li> feeds it back to alloy </li>
