@@ -30,6 +30,10 @@ statement
  | get ';'
  | rga ';'
  | cas ';'
+ | putF ';'
+ | getF ';'
+ | rgaF ';'
+ | casF ';'
  | load ';'
  | store ';'
  | pollcq ';'
@@ -63,7 +67,23 @@ rga
  ;
 
 cas
- : Identifier '=' Cas '(' Identifier ',' Number ',' Number ')'
+ : Identifier '=' Cas '(' Identifier ',' Number ',' Number  ',' Number ')'
+ ;
+
+putF
+ : PutF '(' Identifier ','  Number ',' Identifier ')'
+ ;
+
+getF
+ : Identifier '=' GetF  '(' Identifier ',' Number ')'
+ ;
+
+rgaF
+ : Identifier '=' RgaF '(' Identifier ',' Number ',' Number ')'
+ ;
+
+casF
+ : Identifier '=' CasF '(' Identifier ',' Number ',' Number  ',' Number ')'
  ;
 
 rhs
@@ -160,6 +180,10 @@ Put      : 'put' ;
 Get      : 'get' ;
 Rga      : 'rga' ;
 Cas      : 'cas' ;
+PutF      : 'putF' ;
+GetF      : 'getF' ;
+RgaF      : 'rgaF' ;
+CasF      : 'casF' ;
 PollCQ   : 'poll_cq';
 Shared   : 'shared' ;
 Local    : 'local' ;

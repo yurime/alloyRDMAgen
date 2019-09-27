@@ -1,14 +1,10 @@
-import java.util.List;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.HashMap;
 
 /**
  * Created by andrei on 8/30/15.
- * Update by yuri on 09/2019.
+ * Updated by yuri on 09/2019.
  */
 public class TranslateValue {
-    StringBuffer programBuffer, actionR, actionW, actionSx, actionRp, actionRpq, actionWp, actionWpq, actionRWpq,
+    StringBuffer programBuffer, actionR, actionW, actionSx, actionNf, actionRp, actionRpq, actionWp, actionWpq, actionRWpq,
                  MemoryLocation, Processes, Nodes, InitialValue, actionPollCQ, Integers, Assertion, Items;
     int actionsNumber;
 	int nodesNumber;
@@ -23,6 +19,7 @@ public class TranslateValue {
         this.actionR = new StringBuffer();
         this.actionW = new StringBuffer();
         this.actionSx = new StringBuffer();
+        this.actionNf = new StringBuffer();
         this.actionRp = new StringBuffer();
         this.actionRpq = new StringBuffer();
         this.actionWp = new StringBuffer();
@@ -62,6 +59,9 @@ public class TranslateValue {
         }
         if (actionSx.length() > 0) {
             result.append("disj " + actionSx.toString() + ":  Sx,\n");
+        }
+        if (actionNf.length() > 0) {
+            result.append("disj " + actionSx.toString() + ":  nF,\n");
         }
         if (actionRp.length() > 0) {
             result.append("disj " + actionRp.toString() + ":  nRp,\n");

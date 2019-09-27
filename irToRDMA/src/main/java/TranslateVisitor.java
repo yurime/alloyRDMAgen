@@ -1,4 +1,5 @@
 
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -21,6 +22,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
     int counter; /* unique id for each action */
     int if_context_counter;
     String lastActionName;
+	HashMap<String,String> lastGetWpMap;
 	HashMap<String,String> lastRemoteWriteMap;
 	HashMap<String,String> lastLocalReadMap;
 	HashMap<String,MutableInt> swSizeMap;
@@ -70,6 +72,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         appendVarToBuffer("p" + procNumber, result.Processes);
         result.programBuffer.append("\n/* Process " + procNumber + " */\n");
         this.lastActionName = null;
+        this.lastGetWpMap = new HashMap<String,String>();
         this.lastRemoteWriteMap = new HashMap<String,String>();
         this.lastLocalReadMap = new HashMap<String,String>();
         this.swSizeMap = new HashMap<>();
@@ -136,12 +139,21 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         this.lastActionName = actionName;
     }
 
-    private void appendGetToOrdSw(String actionName, String targetProcess) {
+    private void appendFencedOpToSw(String nfName, String targetProcess) {
+        if (this.lastGetWpMap.containsKey(targetProcess)) {
+        	String lastGetWp=this.lastGetWpMap.get(targetProcess);
+            result.programBuffer.append("\n and " + nfName + " in sw[" + lastGetWp + "]//nic-ord-sw\n");
+            incInSwSizeMap(lastGetWp);
+        }
+    }
+    
+    private void appendGetToOrdSw(String nrpqName, String nwpName, String targetProcess) {
         if (this.lastRemoteWriteMap.containsKey(targetProcess)) {
         	String lastRemoteWrite=this.lastRemoteWriteMap.get(targetProcess);
-            result.programBuffer.append("\n and " + actionName + " in sw[" + lastRemoteWrite + "]//nic-ord-sw\n");
+            result.programBuffer.append("\n and " + nrpqName + " in sw[" + lastRemoteWrite + "]//nic-ord-sw\n");
             incInSwSizeMap(lastRemoteWrite);
         }
+        this.lastGetWpMap.put(targetProcess, nwpName);
     }
     private void appendPutToOrdSw(String rpActionName,String wpqActionName, String targetProcess) {
         if (this.lastRemoteWriteMap.containsKey(targetProcess)) {
@@ -193,6 +205,14 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
     private void condTypePrint(String actionName, String type) {
         result.programBuffer.append("\n and " + actionName + " in " + type);
     }
+
+	private void addUnpolledAction(String targetProcess, String wpName) {
+		if (!this.unpolled_actions.containsKey(targetProcess)) {
+        	this.unpolled_actions.put(targetProcess, new LinkedList<>());
+        }
+        this.unpolled_actions.get(targetProcess).addLast(wpName);
+	}
+
 
     public Object visitStore(TLParser.StoreContext ctx) {
 
@@ -277,8 +297,8 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             appendVarToBuffer(rpqName, result.Items);
             appendVarToBuffer(wpName, result.Items);
             condTypePrint(sxName, "Sx");
-            condTypePrint(rpqName, "Rpq");
-            condTypePrint(wpName, "Wp");
+            condTypePrint(rpqName, "nRpq");
+            condTypePrint(wpName, "nWp");
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(rpqName);
             actions_in_ifs.peek().add(wpName);
@@ -297,7 +317,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
                 "\n and " + wpName + " in sw[" + rpqName + "]//nic-inst-sw" +
                 "\n and wl[" + wpName + "] = " + writeVar +
                 "\n and wV[" + wpName + "] = rV[" + rpqName + "]");
-        appendGetToOrdSw(rpqName,targetProcess);
+        appendGetToOrdSw(rpqName, wpName, targetProcess);
         addUnpolledAction(targetProcess, wpName);
         appendPOtoProg(sxName);
         this.result.actionsNumber+=3;
@@ -306,12 +326,131 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         return null;
     }
 
-	private void addUnpolledAction(String targetProcess, String wpName) {
-		if (!this.unpolled_actions.containsKey(targetProcess)) {
-        	this.unpolled_actions.put(targetProcess, new LinkedList<>());
+
+    public Object visitGetF(TLParser.GetFContext ctx) {
+        int destProcessNumber = Integer.parseInt(ctx.Number().getText());
+        String targetProcess = "p" + destProcessNumber;
+        String writeVar = ctx.Identifier(0).getText();
+        String readVar = ctx.Identifier(1).getText();
+        String sxName = "vsx" + counter;
+        String nfName = "vnf" + counter;
+        String rpqName = "vrpq" + counter;
+        String wpName = "vwp" + counter;
+        
+        this.swSizeMap.put(wpName, new MutableInt(0));
+        this.swSizeMap.put(rpqName, new MutableInt(1));
+        
+        result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
+
+        if (if_context_counter == 0) {
+
+            condAppend(sxName, result.actionSx);
+            condAppend(rpqName, result.actionRpq);
+            condAppend(wpName, result.actionWp);
+            condAppend(nfName, result.actionNf);
+        } else {
+
+            appendVarToBuffer(sxName, result.Items);
+            appendVarToBuffer(nfName, result.Items);
+            appendVarToBuffer(rpqName, result.Items);
+            appendVarToBuffer(wpName, result.Items);
+            condTypePrint(sxName, "Sx");
+            condTypePrint(nfName, "nF");
+            condTypePrint(rpqName, "nRpq");
+            condTypePrint(wpName, "nWp");
+            actions_in_ifs.peek().add(sxName);
+            actions_in_ifs.peek().add(nfName);
+            actions_in_ifs.peek().add(rpqName);
+            actions_in_ifs.peek().add(wpName);
         }
-        this.unpolled_actions.get(targetProcess).addLast(wpName);
-	}
+
+        result.programBuffer.append(
+        		"\n and o[" + sxName + "] = p" + currentProcNumber +
+                "\n and d[" + sxName + "] = p" + destProcessNumber +
+        		"\n and o[" + nfName + "] = p" + currentProcNumber +
+                "\n and d[" + nfName + "] = p" + currentProcNumber +
+                "\n and o[" + rpqName + "] = p" + currentProcNumber +
+                "\n and d[" + rpqName + "] = p" + destProcessNumber +
+                "\n and rl[" + nfName + "] = " + readVar +
+                "\n and " + rpqName + " in sw[" + sxName + "]//nic-inst-sw" +
+                "\n and #sw[" + sxName + "]=1" +
+                "\n and " + rpqName + " in sw[" + nfName + "]//nic-inst-sw" +
+                "\n and #sw[" + nfName + "]=1" +
+                "\n and o[" + wpName + "] = p" + currentProcNumber +
+                "\n and d[" + wpName + "] = p" + currentProcNumber +
+                "\n and " + wpName + " in sw[" + rpqName + "]//nic-inst-sw" +
+                "\n and wl[" + wpName + "] = " + writeVar +
+                "\n and wV[" + wpName + "] = rV[" + rpqName + "]");
+        appendFencedOpToSw(nfName, targetProcess);
+        appendGetToOrdSw(rpqName,wpName, targetProcess);
+        addUnpolledAction(targetProcess, wpName);
+        appendPOtoProg(sxName);
+        this.result.actionsNumber+=3;
+        this.counter++;
+
+        return null;
+    }
+    public Object visitPutF(TLParser.PutFContext ctx) {
+        int destProcessNumber = Integer.parseInt(ctx.Number().getText());
+        String targetProcess = "p" + destProcessNumber;
+        String writeVar = ctx.Identifier(0).getText();
+        String readVar = ctx.Identifier(1).getText();
+        String sxName = "vsx" + counter;
+        String nfName = "vnf" + counter;
+        String rpName = "vrp" + counter;
+        String wpqName = "vwpq" + counter;
+        
+        this.swSizeMap.put(wpqName, new MutableInt(0)); 
+        this.swSizeMap.put(rpName, new MutableInt(1));
+
+        result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
+
+        if (if_context_counter == 0) {
+        	
+            condAppend(sxName, result.actionSx);
+            condAppend(nfName, result.actionNf);
+            condAppend(rpName, result.actionRp);
+            condAppend(wpqName, result.actionWpq);
+        } else {
+
+            appendVarToBuffer(sxName, result.Items);
+            appendVarToBuffer(nfName, result.Items);
+            appendVarToBuffer(rpName, result.Items);
+            appendVarToBuffer(wpqName, result.Items);
+            condTypePrint(sxName, "Sx");
+            condTypePrint(nfName, "nF");
+            condTypePrint(rpName, "nRp");
+            condTypePrint(wpqName, "nWpq");
+            actions_in_ifs.peek().add(sxName);
+            actions_in_ifs.peek().add(nfName);
+            actions_in_ifs.peek().add(rpName);
+            actions_in_ifs.peek().add(wpqName);
+        }
+
+		result.programBuffer.append(
+                "\n and o[" + sxName + "] = p" + currentProcNumber +
+                "\n and d[" + sxName + "] = " + targetProcess + 
+                "\n and o[" + rpName + "] = p" + currentProcNumber +
+                "\n and d[" + rpName + "] = p" + currentProcNumber +
+                "\n and rl[" + rpName + "] = " + readVar +
+                "\n and " + nfName + " in sw[" + sxName + "]//nic-inst-sw" +
+                "\n and #sw[" + sxName + "]=1" +
+                "\n and " + rpName + " in sw[" + nfName + "]//nic-inst-sw" +
+                "\n and #sw[" + nfName + "]=1" +
+                "\n and " + wpqName + " in sw[" + rpName + "]//nic-inst-sw" +
+                "\n and o[" + wpqName + "] = p" + currentProcNumber +
+                "\n and d[" + wpqName + "] = p" + destProcessNumber +
+                "\n and wl[" + wpqName + "] = " + writeVar +
+                "\n and wV[" + wpqName + "] = rV[" + rpName + "]");
+        appendPutToOrdSw(rpName, wpqName, targetProcess);
+        appendFencedOpToSw(nfName, targetProcess);
+        addUnpolledAction(targetProcess, wpqName);
+        appendPOtoProg(sxName);
+        this.counter++;
+        this.result.actionsNumber+=3;
+
+        return null;
+    }
 
     public Object visitPut(TLParser.PutContext ctx) {
         int destProcessNumber = Integer.parseInt(ctx.Number().getText());
@@ -338,8 +477,8 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             appendVarToBuffer(rpName, result.Items);
             appendVarToBuffer(wpqName, result.Items);
             condTypePrint(sxName, "Sx");
-            condTypePrint(rpName, "Rp");
-            condTypePrint(wpqName, "Wpq");
+            condTypePrint(rpName, "nRp");
+            condTypePrint(wpqName, "nWpq");
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(rpName);
             actions_in_ifs.peek().add(wpqName);
@@ -366,7 +505,6 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
 
         return null;
     }
-
     public Object visitRga(TLParser.RgaContext ctx) {
         int destProcessNumber = Integer.parseInt(ctx.Number(0).getText());
         int updateVal = Integer.parseInt(ctx.Number(1).getText());
@@ -375,7 +513,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String readWriteVar = ctx.Identifier(1).getText();
         String sxName = "vsx" + counter;
         String rwpqName = "vrwpq" + counter;
-        String wpName = "vw" + counter;
+        String wpName = "vwp" + counter;
 
 
         this.swSizeMap.put(rwpqName, new MutableInt(1));
@@ -393,8 +531,8 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             appendVarToBuffer(rwpqName, result.Items);
             appendVarToBuffer(wpName, result.Items);
             condTypePrint(sxName, "Sx");
-            condTypePrint(rwpqName, "RWpq");
-            condTypePrint(wpName, "Wp");
+            condTypePrint(rwpqName, "nRWpq");
+            condTypePrint(wpName, "nWp");
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(rwpqName);
             actions_in_ifs.peek().add(wpName);
@@ -430,12 +568,12 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String targetProcess = "p" + destProcessNumber;
         int targetValue = Integer.parseInt(ctx.Number(1).getText());
         int newValue = Integer.parseInt(ctx.Number(2).getText());
-        String writeVar = ctx.Identifier(0).getText();
+        String writeVar = ctx.Identifier(0).getText(); 
         String readCompareVar = ctx.Identifier(1).getText();
 
-        String sxName = "sx" + counter;
+        String sxName = "vsx" + counter;
         String rwpqName = "vrwpq" + counter;
-        String wpName = "vw" + counter;
+        String wpName = "vwp" + counter;
 
         this.swSizeMap.put(rwpqName, new MutableInt(1)); 
         this.swSizeMap.put(wpName, new MutableInt(0));
@@ -452,8 +590,8 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             appendVarToBuffer(wpName, result.Items);
 
             condTypePrint(sxName, "Sx");
-            condTypePrint(rwpqName, "RWpq");
-            condTypePrint(wpName, "Wp");
+            condTypePrint(rwpqName, "nRWpq");
+            condTypePrint(wpName, "nWp");
 
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(rwpqName);
@@ -488,7 +626,149 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
 
         return null;
     }
-    
+
+    public Object visitRgaF(TLParser.RgaFContext ctx) {
+        int destProcessNumber = Integer.parseInt(ctx.Number(0).getText());
+        int updateVal = Integer.parseInt(ctx.Number(1).getText());
+        String targetProcess = "p" + destProcessNumber;
+        String writeVar = ctx.Identifier(0).getText();
+        String readWriteVar = ctx.Identifier(1).getText();
+        String sxName = "vsx" + counter;
+        String nfName = "vnf" + counter;
+        String rwpqName = "vrwpq" + counter;
+        String wpName = "vwp" + counter;
+
+
+        this.swSizeMap.put(rwpqName, new MutableInt(1));
+        this.swSizeMap.put(wpName, new MutableInt(0)); 
+
+        result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
+
+        if (if_context_counter == 0) {
+            condAppend(sxName, result.actionSx);
+            condAppend(nfName, result.actionNf);
+            condAppend(rwpqName, result.actionRWpq);
+            condAppend(wpName, result.actionWp);
+        } else {
+
+            appendVarToBuffer(sxName, result.Items);
+            appendVarToBuffer(nfName, result.Items);
+            appendVarToBuffer(rwpqName, result.Items);
+            appendVarToBuffer(wpName, result.Items);
+            condTypePrint(sxName, "Sx");
+            condTypePrint(nfName, "nF");
+            condTypePrint(rwpqName, "RWpq");
+            condTypePrint(wpName, "Wp");
+            actions_in_ifs.peek().add(sxName);
+            actions_in_ifs.peek().add(nfName);
+            actions_in_ifs.peek().add(rwpqName);
+            actions_in_ifs.peek().add(wpName);
+        }
+
+		result.programBuffer.append(
+				"\n and o[" + sxName + "] = p" + currentProcNumber +
+                "\n and d[" + sxName + "] = "+ targetProcess +
+        		"\n and o[" + nfName + "] = p" + currentProcNumber +
+                "\n and d[" + nfName + "] = p" + currentProcNumber +
+                "\n and " + nfName + " in sw[" + sxName + "]//nic-inst-sw" +
+                "\n and #sw[" + sxName + "]=1" +
+                "\n and " + rwpqName + " in sw[" + nfName + "]//nic-inst-sw" +
+                "\n and #sw[" + nfName + "]=1" +
+                "\n and " + wpName + " in sw[" + rwpqName + "]//nic-inst-sw" +
+
+                "\n and o[" + rwpqName + "] = p" + currentProcNumber +
+                "\n and d[" + rwpqName + "] = p" + destProcessNumber +
+                "\n and wl[" + rwpqName + "] = " + readWriteVar +
+                "\n and wV[" + rwpqName + "] = rV[" + rwpqName + "].plus[" + updateVal + "]" +
+
+                "\n and o[" + wpName + "] = p" + currentProcNumber +
+                "\n and d[" + wpName + "] = p" + currentProcNumber +
+                "\n and wl[" + wpName + "] = " + writeVar +
+                "\n and wV[" + wpName + "] = rV[" + rwpqName + "]");
+
+        appendFencedOpToSw(nfName, targetProcess);
+		appendRgaToOrdSw(rwpqName, targetProcess);
+        addUnpolledAction(targetProcess, wpName);
+        appendPOtoProg(sxName);
+        this.counter++;
+        this.result.actionsNumber+=3;
+
+        return null;
+    }
+
+    public Object visitCasF(TLParser.CasFContext ctx) {
+        int destProcessNumber = Integer.parseInt(ctx.Number(0).getText());
+        String targetProcess = "p" + destProcessNumber;
+        int targetValue = Integer.parseInt(ctx.Number(1).getText());
+        int newValue = Integer.parseInt(ctx.Number(2).getText());
+        String writeVar = ctx.Identifier(0).getText(); 
+        String readCompareVar = ctx.Identifier(1).getText();
+
+        String sxName = "vsx" + counter;
+        String nfName = "vnf" + counter;
+        String rwpqName = "vrwpq" + counter;
+        String wpName = "vwp" + counter;
+
+        this.swSizeMap.put(rwpqName, new MutableInt(1)); 
+        this.swSizeMap.put(wpName, new MutableInt(0));
+        
+        result.programBuffer.append("\n /*" + ctx.getText() + " */ \n");
+
+        if (if_context_counter == 0) {
+            condAppend(sxName, result.actionSx);
+            condAppend(nfName, result.actionNf);
+            condAppend(rwpqName, result.actionRWpq);
+            condAppend(wpName, result.actionWp);
+        } else {
+            appendVarToBuffer(sxName, result.Items);
+            appendVarToBuffer(nfName, result.Items);
+            appendVarToBuffer(rwpqName, result.Items);
+            appendVarToBuffer(wpName, result.Items);
+
+            condTypePrint(sxName, "Sx");
+            condTypePrint(nfName, "nF");
+            condTypePrint(rwpqName, "RWpq");
+            condTypePrint(wpName, "Wp");
+
+            actions_in_ifs.peek().add(sxName);
+            actions_in_ifs.peek().add(nfName);
+            actions_in_ifs.peek().add(rwpqName);
+            actions_in_ifs.peek().add(wpName);
+        }
+
+		result.programBuffer.append(
+                	"\n and o[" + sxName + "] = p" + currentProcNumber +
+                	"\n and d[" + sxName + "] = " + targetProcess + 
+            		"\n and o[" + nfName + "] = p" + currentProcNumber +
+                    "\n and d[" + nfName + "] = p" + currentProcNumber +
+                	"\n and o[" + rwpqName + "] = p" + currentProcNumber +
+                    "\n and d[" + rwpqName + "] = " + targetProcess +
+                    "\n and rl[" + rwpqName + "] = " + readCompareVar +
+                    "\n and " + nfName + " in sw[" + sxName + "]//nic-inst-sw" +
+                    "\n and #sw[" + sxName + "]=1" +
+                    "\n and " + rwpqName + " in sw[" + nfName + "]//nic-inst-sw" +
+                    "\n and #sw[" + nfName + "]=1" +
+                    "\n and ((rV[" + rwpqName + "]= " + targetValue + ") implies" +
+                    "\n (wV[" + rwpqName + "] = " + newValue + ") else" +
+                    "\n (wV[" + rwpqName + "] = rV[" + rwpqName + "]))" +
+
+                    "\n and o[" + wpName + "] = p" + currentProcNumber +
+                    "\n and d[" + wpName + "] = p" + currentProcNumber +
+                    "\n and wl[" + wpName + "] = " + writeVar +
+                    "\n and wV[" + wpName + "] = rV[" + rwpqName +"]" +
+                    "\n and " + wpName + " in sw[" + rwpqName + "]//nic-inst-sw");
+
+		appendCasToOrdSw(rwpqName, targetProcess);
+        appendFencedOpToSw(nfName, targetProcess);
+        addUnpolledAction(targetProcess, wpName);
+        appendPOtoProg(sxName);
+        this.counter++;
+        this.result.actionsNumber+=3;
+
+
+        return null;
+    }
+       
     public Object visitPollcq(TLParser.PollcqContext ctx){
         int destProcessNumber = Integer.parseInt(ctx.Number().getText());
         String targetProcess = "p" + destProcessNumber;
