@@ -9,6 +9,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
     InstanceValue result;
     StringBuilder simpleExpressionBuffer, expressionBuffer;
 
+    Node currentNode;
     Proc currentProc;
     int counter;
 
@@ -20,10 +21,10 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
     @Override
     public Object visitNode(TLParser.NodeContext ctx) {
-        int procNumber = Integer.parseInt(ctx.Number().getText());
-        this.currentProc = new Proc(procNumber);
-        result.processes.add(this.currentProc);
-        result.processContents.put(this.currentProc.procNumber, new ArrayList<>());
+        int nodeNumber = Integer.parseInt(ctx.Number().getText());
+        this.currentNode = new Node(nodeNumber);
+        result.nodes.add(this.currentNode);
+        result.processContents.put(this.currentNode.nodeNumber, new ArrayList<>());
 
         visitChildren(ctx);
         return null;
@@ -34,6 +35,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         int procNumber = Integer.parseInt(ctx.Number().getText());
         this.currentProc = new Proc(procNumber);
         result.processes.add(this.currentProc);
+        result.nodeProcesses.get(currentNode.nodeNumber).add(procNumber);
         result.processContents.put(this.currentProc.procNumber, new ArrayList<>());
 
         visitChildren(ctx);
@@ -42,19 +44,19 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
     @Override
     public Object visitSharedDecl(TLParser.SharedDeclContext ctx) {
-        return null;
+        return null;//handled by VarVisitor
     }
 
     @Override
     public Object visitLocalDecl(TLParser.LocalDeclContext ctx) {
-        return null;
+        return null;//handled by VarVisitor
     }
 
-    @Override
-    public Object visitStatement(TLParser.StatementContext ctx) {
-        visitChildren(ctx);
-        return null;
-    }
+//    @Override
+//    public Object visitStatement(TLParser.StatementContext ctx) {
+//        visitChildren(ctx);
+//        return null;
+//    }
 
     @Override
     public Object visitAssignment(TLParser.AssignmentContext ctx) {

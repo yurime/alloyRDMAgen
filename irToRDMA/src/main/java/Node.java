@@ -2,7 +2,7 @@
 
 
 /**
- * Created by yuri on 8/20/15.
+ * Created by yuri on 20/8/15.
  */
 public class Node {
     int nodeNumber;

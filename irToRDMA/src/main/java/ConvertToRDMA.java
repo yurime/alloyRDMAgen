@@ -11,7 +11,14 @@ import java.util.Arrays;
 import org.antlr.v4.runtime.ANTLRFileStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
-
+/**
+ * (ConvertToRma)Created by Andrei on 8/15? He didn't say..
+ * Modified by Yuri 09/2019 (and turned to ConvertToRDMA)
+ * 
+ * ConvertToRDMA.main() Will read the .ir file and inject into the rdma template code 
+ * that will simulate the .ir file behavior under rdma setting. 
+ *
+ */
 public class ConvertToRDMA { // Intelliband, VPI_Verbs API
     public static String DEFAULT_OUTPUT_DIR = "output";
 
@@ -19,23 +26,23 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
     ParseTree tree;
     VarsValue varsValue;
     InstanceValue instanceValue;
-    TranslateValue translateValue;
+    TranslateValue translateValue;//not used?
 
     public ConvertToRDMA(String inputFileName, ParseTree tree) {
         this.inputFileName = inputFileName;
         this.tree = tree;
 
-        translateValue = new TranslateValue();
+        translateValue = new TranslateValue();// V
         TranslateVisitor translateVisitor = new TranslateVisitor(translateValue);
         translateVisitor.visit(tree);
-//
-//        instanceValue = new InstanceValue();
-//        RmaVisitor rmaVisitor = new RmaVisitor(instanceValue);
-//        rmaVisitor.visit(tree);
-//
-//        varsValue = new VarsValue();
-//        VarsVisitor varsVisitor = new VarsVisitor(varsValue, instanceValue);
-//        varsVisitor.visit(tree);
+
+        instanceValue = new InstanceValue(); //V
+        RDMAvisitor rdmaVisitor = new RDMAvisitor(instanceValue);
+        rdmaVisitor.visit(tree);
+
+        varsValue = new VarsValue();
+        VarsVisitor varsVisitor = new VarsVisitor(varsValue, instanceValue);
+        varsVisitor.visit(tree);
     }
 
     public void incorporateOriginalIR(PrintStream os) throws java.io.IOException {
@@ -399,14 +406,15 @@ public void incorporateTestWitnesses(PrintStream os) throws java.io.IOException 
             break;
         }
     }
-//
-//    public void expandTemplate(File outputDir, String outputName) throws java.io.IOException {
-//        for (String fn : Arrays.asList("rdma-test.c", "rdma-test.h")) {
-//            File os = new File(outputDir, fn);
-//            PrintStream ps = new PrintStream(os);
-//
-//            InputStream in = ConvertToRDMA.class.getClassLoader().getResourceAsStream(fn);
-//            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+
+    public void expandTemplate(File outputDir, String outputName) throws java.io.IOException {
+    	//throw new RuntimeException("not implemented yet");
+    	for (String fn : Arrays.asList("rdma-test.c", "rdma-test.h")) {
+            File os = new File(outputDir, fn);
+            PrintStream ps = new PrintStream(os);
+
+            InputStream in = ConvertToRDMA.class.getClassLoader().getResourceAsStream(fn);
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
 //            String s;
 //
 //            while ((s = br.readLine()) != null) {
@@ -433,12 +441,13 @@ public void incorporateTestWitnesses(PrintStream os) throws java.io.IOException 
 //                    ps.println(s);
 //                }
 //            }
-//            br.close();
-//            ps.close();
-//        }
-//    }
-//
-//    public void generateAuxiliaries(File outputDir, String outputName) throws java.io.IOException {
+    		br.close();
+    		ps.close();
+    	}
+    }
+
+    public void generateAuxiliaries(File outputDir, String outputName) throws java.io.IOException {
+    	throw new RuntimeException("not implemented yet");
 //        for (String fn : Arrays.asList("Makefile", "rdma-client.c", "rdma-common.c", "rdma-common.h", "rdma-server.c", "rdma-starter.c", "rdma-single.c")) {
 //            File os = new File(outputDir, fn);
 //            PrintStream ps = new PrintStream(os);
@@ -459,8 +468,42 @@ public void incorporateTestWitnesses(PrintStream os) throws java.io.IOException 
 //            br.close();
 //            ps.close();
 //        }
-//    }
+    }
+	private static File getOutputDir(String outputFileName) {
+		String allOutputDirName = DEFAULT_OUTPUT_DIR;
+        File allOutputDir = new File(allOutputDirName);
+        if (!allOutputDir.exists()) {
+            allOutputDir.mkdir();
+            if (!allOutputDir.exists()) {
+                System.err.printf("could not create output directory %s; aborting.\n",
+                                  allOutputDirName);
+                System.exit(1);
+            }
+        }
+        if (!allOutputDir.isDirectory()) {
+            System.err.printf("output directory %s is not directory; aborting.\n",
+                              allOutputDirName);
+            System.exit(1);
+        }
 
+        String thisOutputDirName = allOutputDir + File.separator + outputFileName;
+        File thisOutputDir = new File(thisOutputDirName);
+        if (!thisOutputDir.exists()) {
+            thisOutputDir.mkdir();
+            if (!thisOutputDir.exists()) {
+                System.err.printf("could not create output directory %s; aborting.\n",
+                                  thisOutputDirName);
+                System.exit(1);
+            }
+        }
+        if (!thisOutputDir.isDirectory()) {
+            System.err.printf("output directory %s is not directory; aborting.\n",
+                              thisOutputDirName);
+            System.exit(1);
+        }
+		return thisOutputDir;
+	}
+	
     public static void main(String[] args) throws Exception {
         if (args.length < 2) {
             System.out.println("Please specify input file name and output name");
@@ -469,49 +512,21 @@ public void incorporateTestWitnesses(PrintStream os) throws java.io.IOException 
         String inputFileName = args[0];
         String outputFileName = args[1];
 
-//        /* Parse input program */
-//        TLLexer lexer = new TLLexer(new ANTLRFileStream(inputFileName));
-//        TLParser parser = new TLParser(new CommonTokenStream(lexer));
-//
-//        parser.setBuildParseTree(true);
-//        ParseTree tree = parser.parse();
-//
-//        ConvertToRDMA c = new ConvertToRDMA(inputFileName, tree);
-//
-//        String allOutputDirName = DEFAULT_OUTPUT_DIR;
-//        File allOutputDir = new File(allOutputDirName);
-//        if (!allOutputDir.exists()) {
-//            allOutputDir.mkdir();
-//            if (!allOutputDir.exists()) {
-//                System.err.printf("could not create output directory %s; aborting.\n",
-//                                  allOutputDirName);
-//                System.exit(1);
-//            }
-//        }
-//        if (!allOutputDir.isDirectory()) {
-//            System.err.printf("output directory %s is not directory; aborting.\n",
-//                              allOutputDirName);
-//            System.exit(1);
-//        }
-//
-//        String thisOutputDirName = allOutputDir + File.separator + outputFileName;
-//        File thisOutputDir = new File(thisOutputDirName);
-//        if (!thisOutputDir.exists()) {
-//            thisOutputDir.mkdir();
-//            if (!thisOutputDir.exists()) {
-//                System.err.printf("could not create output directory %s; aborting.\n",
-//                                  thisOutputDirName);
-//                System.exit(1);
-//            }
-//        }
-//        if (!thisOutputDir.isDirectory()) {
-//            System.err.printf("output directory %s is not directory; aborting.\n",
-//                              thisOutputDirName);
-//            System.exit(1);
-//        }
-//
-//        c.expandTemplate(thisOutputDir, outputFileName);
-//        c.generateAuxiliaries(thisOutputDir, outputFileName);
+        /* Parse input program */
+        TLLexer lexer = new TLLexer(new ANTLRFileStream(inputFileName));
+        TLParser parser = new TLParser(new CommonTokenStream(lexer));
+
+        parser.setBuildParseTree(true);
+        ParseTree tree = parser.parse();
+
+        ConvertToRDMA c = new ConvertToRDMA(inputFileName, tree);
+
+        File thisOutputDir = getOutputDir(outputFileName);
+
+        c.expandTemplate(thisOutputDir, outputFileName);
+        c.generateAuxiliaries(thisOutputDir, outputFileName);
     }
+
+
 }
 // -*-  indent-tabs-mode:nil; c-basic-offset:4; -*-

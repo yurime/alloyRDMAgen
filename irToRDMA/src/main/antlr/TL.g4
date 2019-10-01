@@ -19,9 +19,13 @@ node
 
 
 process
- : Process Number sharedDecl? localDecl? statement*
+ : Process Number decl statement*
  ;
 
+decl
+ : sharedDecl? localDecl?
+ ;
+ 
 statement
  : assignment ';'
  | ifStatement

@@ -14,12 +14,12 @@ dependencies {
     testCompile 'junit:junit:[4,)'//YM-- add this?
 }
 
-//test { //YM-- add this?
-//    testLogging {
-//        // Show that tests are run in the command-line output
-//        events 'started', 'passed'
-//    }
-//}
+test { //YM-- add this?
+   testLogging {
+       // Show that tests are run in the command-line output
+       events 'started', 'passed'
+   }
+}
 
 // I wish I had a better way of copying the antlr4 runtime.
 task copyDepJars(type: Copy) {

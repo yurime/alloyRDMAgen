@@ -2,7 +2,8 @@
 
 
 /**
- * Created by andrei on 8/28/15.
+ * Created by andrei on 28/8/15.
+ * Modified by yuri on 9/19.
  */
 public class Proc {
     int procNumber;
