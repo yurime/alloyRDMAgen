@@ -8,23 +8,24 @@ using std::ostream;
 //std::thread
 
 
-#include "../resources.h"
+// //for include ..random
+// #include <stdio.h>      /* printf, scanf, puts, NULL */
+// #include <stdlib.h>     /* srand, rand */
+// #include <time.h>       /* time */
+// //end of for include ..random and sleep(10)
+
+#include "rdma_code/resources.h"
 using rdma::Resources;
 
-#include "../connection.h"
+#include "rdma_code/connection.h"
 using rdma::Connection;
 
-#include "../connection_manager.h"
+#include "rdma_code/connection_manager.h"
 using rdma::ConnectionManager;
-
-//for include ..random
-#include <stdio.h>      /* printf, scanf, puts, NULL */
-#include <stdlib.h>     /* srand, rand */
-#include <time.h>       /* time */
-//end of for include ..random
 
 #define SERVER_ID 0
 #define PORT 19875
+#define FILE_NAME "manual_attempt1.cpp"//$0;
 /******************************************************************************************/
 /******************************************************************************************/
 /**                                                                                      **/
@@ -39,25 +40,50 @@ using rdma::ConnectionManager;
         con.addLocalResource(varName##_res);\
         varName
 
+#define REMOTE_SHARED(varName,con) \
+    rdma::RemConData varName##_res = con.getRemoteEntry(#varName);
+
 #define SILENT_SYNC(msg) {\
-    if (!con.sync())  { \
+      if (!con.sync())  { \
         cerr << "failed to sync at the " << msg << endl;  \
+        return 1;\
+      }\
+    }
+
+#define POST_PUT(con,my_name,fromVarName,targVarName){\
+        if (con.postWRITE(fromVarName##_res, targVarName##_res))   {\
+                cerr << my_name << " failed to post postWRITE request" << endl;\
+                return 1;\
+       }\
+   }
+
+#define POST_GET(con,my_name,fromVarName,targVarName){\
+        if (con.postREAD(targVarName##_res, fromVarName##_res))   {\
+                cerr << my_name << " failed to post postREAD request" << endl;\
+                return 1;\
+       }\
+   }
+
+#define POLL_CQ(con,my_name){\
+    if (con.pollCompletion ())  {\
+        cerr << my_name << " poll completion failed 2" << endl;\
         return 1;\
         }\
     }
 
-int thr1(){//server(number_of_clients=1){
+int thr0(){//server(number_of_clients=1){
     //--------------------------------------------------------
     //-------------- Set up ----------------------------------
     int ret = 0;
-
+     //$05 // incorporate local declaration;
     ConnectionManager con(SERVER_ID, PORT);
-
+    //$03     // incorporate test init;
     LOCAL_SHARED(Y1, con) = 2;
     LOCAL_SHARED(Y2, con) = 1;
 
-    /* initialize random seed: */
-    srand (time(NULL));
+    LOCAL_SHARED(tr1_c1, con) = 1;
+    LOCAL_SHARED(tr1_c2, con) = 1;
+
     
     /* connect the QPs */
     con.add_connection(1, "");
@@ -67,23 +93,21 @@ int thr1(){//server(number_of_clients=1){
         return 1;
     }
     cout << "connected to queue" << endl;  
+    //$10 //incorporate remotely accessed varaibles;
+    REMOTE_SHARED(X, con.at(1));
 
-    rdma::RemConData X_res = con.getRemoteEntry("X");
-
+    //$13 //incorporate test body;
+    // --------------------------------------------------------
+    // -------------- Do something -----------------------------
     SILENT_SYNC("program start");
 
     cout << "starting test" << endl;  
-    // --------------------------------------------------------
-    // -------------- Do something -----------------------------
+
     try{
-        if (con.at(1).postWRITE(Y1_res, X_res))   {
-                cerr << PORT << " failed to post FetchAndAdd request" << endl;
-                return 1;
-        }
-        if (con.at(1).postWRITE(Y2_res, X_res))   {
-                cerr << PORT << " failed to post FetchAndAdd request" << endl;
-                return 1;
-        }
+        POST_PUT(con.at(1),PORT,Y1, X);
+        POST_PUT(con.at(1),PORT,Y2, X);
+        POLL_CQ(con.at(1),PORT);
+        POLL_CQ(con.at(1),PORT);
     }catch(std::exception &e){
         cerr << "Server failed because " << e.what() << endl;
         ret =1;
@@ -93,12 +117,21 @@ int thr1(){//server(number_of_clients=1){
     //--------------------------------------------------------
     //-------------- End operations ---------------------------
  
-
     SILENT_SYNC("end of operations");
 
+
+    SILENT_SYNC("end of collecting results");
+  
+    //$14 //incorporateTestWitnesses(os);  
+    if( ! (tr1_c1==2 && tr1_c2==1) ){
+        cout << FILE_NAME << ":Success" << endl;
+    }else{
+        cout << FILE_NAME  << ":Failed reaching the forbidden output:" << endl;
+        cout << "(tr1:c1==2 && tr1:c2==1)" << endl;
+    }
     cout << "Y1="<< Y1 << "; Y2="<< Y2 << endl;
     cout << "ended test" << endl;  
-    
+    SILENT_SYNC("end of validating results");
     return ret;
 }
 
@@ -108,9 +141,12 @@ int thr0(string server_name, u_int32_t tcp_port, int cliend_id){
     //--------------------------------------------------------
     //-------------- Set up ----------------------------------
  
+     //$5 // incorporate local declaration;
+
     rdma::Connection con(server_name, SERVER_ID, cliend_id, tcp_port);
-        
+    //$3   incorporateSharedVarDecls(os);
     LOCAL_SHARED(X, con) = 0;
+    LOCAL_SHARED(Scrap, con) = 1;
     uint64_t c1,c2;
 
     if (con.connectQP())
@@ -118,25 +154,33 @@ int thr0(string server_name, u_int32_t tcp_port, int cliend_id){
         cerr << tcp_port << " failed to connect QPs" << endl;
         return 1;
     }
+    REMOTE_SHARED(tr1_c1, con);
+    REMOTE_SHARED(tr1_c2, con);
     
     SILENT_SYNC("program start");
     
     //--------------------------------------------------------
     //-------------- Do something -----------------------------
+    //$13 //incorporate test body client;
     c1 = X;
     c2 = X;
     //--------------------------------------------------------
     //-------------- End operations ---------------------------
     
     SILENT_SYNC("end of operations");
+    //$15// incorporateTestCollate; sending local variables;
+    Scrap = c1;
+    POST_PUT(con,tcp_port,Scrap, tr1_c1);
+    POLL_CQ(con,tcp_port);
 
-    if( ! (c1==2 && c2==1) ){
-        cout << "test was successfull" << endl;
-    }else{
-        cout << "test Failed" << endl;
-    }
+    Scrap = c2;
+    POST_PUT(con,tcp_port,Scrap, tr1_c2);
+    POLL_CQ(con,tcp_port);
+
     cout << "X="<< X << "; c1="<< c1 << "; c2="<< c2 <<endl;
     cout << "ended test" << endl;  
+    SILENT_SYNC("end of collecting results");
+    SILENT_SYNC("end of validating results");
     return 0;
 
 }
@@ -183,7 +227,7 @@ int main (int argc, char *argv[])
 
     int rc = 0;
     if (server_name.empty()){
-        rc = thr1();
+        rc = thr0();
         std::cout << "server";
     } else{
         rc = thr0(server_name, PORT, my_id);
@@ -201,3 +245,6 @@ int main (int argc, char *argv[])
 
     return 0;
 }
+/* //source ir
+//$11;
+*/

@@ -1,10 +1,11 @@
 // -*-  indent-tabs-mode:nil; c-basic-offset:4; -*-
+// Deprecated 
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 /**
  * Created by andrei on 28/8/15.
- * Modified by Yuri 09/2019 
+ * Modified by Yuri 09/2019
  */
 public class VarsVisitor extends TLBaseVisitor<VarsValue> {
     InstanceValue dv;
@@ -68,9 +69,7 @@ public class VarsVisitor extends TLBaseVisitor<VarsValue> {
                 // yes, modify the global
                 result.localToRHS.put(localVar, rhs);
             }
-	    dv.varNameToIndex.put(localVarName+"_sender", sharedVarCounter++);
-	    dv.varNameToIndex.put(localVarName+"_receiver", sharedVarCounter++);
-	    dv.varNameToIndex.put(localVarName+"_global", sharedVarCounter++);
+	    dv.varNameToIndex.put(localVarName, sharedVarCounter++);
         }
         return ldResult;
     }

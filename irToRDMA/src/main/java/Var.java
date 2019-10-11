@@ -3,7 +3,8 @@
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 /**
- * Created by andrei on 8/28/15.
+ * Created by andrei on 28/8/15.
+ * Modified by Yuri 09/2019
  */
 public class Var implements Comparable<Var> {
     String name;
