@@ -35,7 +35,7 @@ using rdma::ConnectionManager;
 /******************************************************************************************/
 
 #define LOCAL_SHARED(varName,con) \
-        rdma::LocalConData<uint64_t>  varName##_res("varName");\
+        rdma::LocalConData<uint64_t>  varName##_res(#varName);\
         auto& varName = varName##_res.get(); \
         con.addLocalResource(varName##_res);\
         varName
@@ -76,7 +76,7 @@ int thr0(){//server(number_of_clients=1){
     //-------------- Set up ----------------------------------
     int ret = 0;
      //$05 // incorporate local declaration;
-    ConnectionManager con(SERVER_ID, PORT);
+    rdma::ConnectionManager con(SERVER_ID, PORT);
     //$03     // incorporate test init;
     LOCAL_SHARED(Y1, con) = 2;
     LOCAL_SHARED(Y2, con) = 1;
@@ -92,7 +92,7 @@ int thr0(){//server(number_of_clients=1){
         cerr << "failed to connect QPs" << endl;
         return 1;
     }
-    cout << "connected to queue" << endl;  
+    cout << "connected to queue thr0" << endl;  
     //$10 //incorporate remotely accessed varaibles;
     REMOTE_SHARED(X, con.at(1));
 
@@ -143,19 +143,20 @@ int thr0(string server_name, u_int32_t tcp_port, int cliend_id){
  
      //$5 // incorporate local declaration;
 
-    rdma::Connection con(server_name, SERVER_ID, cliend_id, tcp_port);
+    rdma::ConnectionManager con(cliend_id, tcp_port);
     //$3   incorporateSharedVarDecls(os);
     LOCAL_SHARED(X, con) = 0;
     LOCAL_SHARED(Scrap, con) = 1;
     uint64_t c1,c2;
 
+    con.add_connection(0, server_name);
     if (con.connectQP())
     {
         cerr << tcp_port << " failed to connect QPs" << endl;
         return 1;
     }
-    REMOTE_SHARED(tr1_c1, con);
-    REMOTE_SHARED(tr1_c2, con);
+    REMOTE_SHARED(tr1_c1, con.at(0));
+    REMOTE_SHARED(tr1_c2, con.at(0));
     
     SILENT_SYNC("program start");
     
@@ -167,15 +168,16 @@ int thr0(string server_name, u_int32_t tcp_port, int cliend_id){
     //--------------------------------------------------------
     //-------------- End operations ---------------------------
     
+    sleep(10);
     SILENT_SYNC("end of operations");
     //$15// incorporateTestCollate; sending local variables;
     Scrap = c1;
-    POST_PUT(con,tcp_port,Scrap, tr1_c1);
-    POLL_CQ(con,tcp_port);
+    POST_PUT(con.at(0),tcp_port,Scrap, tr1_c1);
+    POLL_CQ(con.at(0),tcp_port);
 
     Scrap = c2;
-    POST_PUT(con,tcp_port,Scrap, tr1_c2);
-    POLL_CQ(con,tcp_port);
+    POST_PUT(con.at(0),tcp_port,Scrap, tr1_c2);
+    POLL_CQ(con.at(0),tcp_port);
 
     cout << "X="<< X << "; c1="<< c1 << "; c2="<< c2 <<endl;
     cout << "ended test" << endl;  
