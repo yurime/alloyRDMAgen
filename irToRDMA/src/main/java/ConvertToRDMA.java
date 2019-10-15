@@ -24,10 +24,13 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
     VarsValue varsValue;
     InstanceValue instanceValue;
     TranslateValue translateValue;//not used?
+	String tabs;
+	static String sing_tab="  ";
 	
     public ConvertToRDMA(String inputFileName, ParseTree tree) {
         this.inputFileName = inputFileName;
         this.tree = tree;
+        this.tabs = "";
 
         translateValue = new TranslateValue();// V
         TranslateVisitor translateVisitor = new TranslateVisitor(translateValue);
@@ -46,11 +49,12 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
     public void incorporateOriginalIR(PrintStream os) throws java.io.IOException {
         BufferedReader br = new BufferedReader(new FileReader(inputFileName));
         String s = null;
+        os.printf("/*");
         while ((s = br.readLine()) != null) {
 			os.println(s);
         }
+        os.printf("*/");
         br.close();
-    	throw new RuntimeException("not implemented yet");
     }
 //
     public void incorporateSharedVarDecls(PrintStream os, Proc p) throws java.io.IOException {
@@ -60,38 +64,66 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
 		allVars.addAll(varsValue.procToShared.get(p));
         
         for (Var v : allVars) {
-            os.printf("LOCAL_SHARED(%s, con);\n", v.name, instanceValue.varNameToIndex.get(v.name));
+            os.printf(tabs + "LOCAL_SHARED(%s, con);\n", v.name, instanceValue.varNameToIndex.get(v.name));
         }
     }
-//
 
-    public void incorporateSharedVars(PrintStream os, Proc p) throws java.io.IOException {
-	Set<Var> sharedVars = new TreeSet<>();
 
-	sharedVars.addAll(varsValue.procToShared.get(p));
-	for (Var v : sharedVars) {
-	    os.printf("LOCAL_SHARED(%s, con) = %d;\n", v.name,v.iv);
-	}
-   }
-    
-    public void incorporateRemAccessVars(PrintStream os, Proc me) throws java.io.IOException {
-	for (Proc tar : instanceValue.processes) {
-		if(tar==me) continue;
+	public void incorporateSharedVars(PrintStream os, Proc p) throws java.io.IOException {
 		Set<Var> sharedVars = new TreeSet<>();
-		sharedVars.addAll(varsValue.procToShared.get(tar));
+		
+		sharedVars.addAll(varsValue.procToShared.get(p));
 		for (Var v : sharedVars) {
-		    os.printf("REMOTE_SHARED(%s, con.at(%d))", v.name,tar);
+		    os.printf(tabs + "LOCAL_SHARED(%s, con) = %d;\n", v.name,v.iv);
 		}
+		if(!p.isServer()) {
+			os.printf(tabs + "LOCAL_SHARED(Scrap, con) = 1;\n");
+		}else {
+			for (Proc tar : instanceValue.processes) {
+				if(tar==p) continue;
+				Set<Var> remSharedVars = new TreeSet<>();
+				remSharedVars.addAll(varsValue.procToShared.get(tar));
+				for (Var v : remSharedVars) {
+				    os.printf(tabs + "LOCAL_SHARED(tr%s_%s, con) = 0", tar, v.name);
+				}
+			}
+		}//endof if p.isServer
 	}
+	public void incorporateAddConnections(PrintStream os, Proc p) throws java.io.IOException {
+		
+		for (Proc q : instanceValue.processes) {
+			if(p==q) continue;
+		    os.printf(tabs + "con.add_connection(%s, thr_ips[%s]);\n", q,q);
+		}
+		os.printf(tabs+ "CONNECT_QP(whoami);\n");
+	}
+    /*
+     * For each process p, all shared variables from processes q(<>p) he can access
+     */
+    public void incorporateRemAccessVars(PrintStream os, Proc me) throws java.io.IOException {
+		for (Proc tar : instanceValue.processes) {
+			if(tar==me) continue;
+			Set<Var> sharedVars = new TreeSet<>();
+			sharedVars.addAll(varsValue.procToShared.get(tar));
+			for (Var v : sharedVars) {
+			    os.printf(tabs + "REMOTE_SHARED(%s, con.at(%d))", v.name,tar);
+			}
+		}
+		os.printf(tabs + "SILENT_SYNC(\"program start\");\n");
    }
-//
+
+   /*
+    * Local variables and creation of ConnectionManager
+    */
     public void incorporateLocalDecls(PrintStream os, Proc p) throws java.io.IOException {
     	StringBuilder vars = new StringBuilder();
     	for (Var v : varsValue.procToLocal.get(p)) {
     		if (vars.length() > 0) vars.append(", ");
 			vars.append(v.name);
     	}
-    	os.printf("uint64_t %s;\n", vars);
+    	os.printf(tabs + "uint64_t %s;\n", vars);
+    	os.printf(tabs + "rdma::ConnectionManager con(%s, thr_ips[%s]);\n", p, p);
+    	   
     }
 //
 //    int getAllVarsSize() {
@@ -107,61 +139,52 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
 //
 
     void emitPerProcTestBody(PrintStream os, Proc p) throws java.io.IOException {
-    	for (String s : instanceValue.processContents.get(p.procNumber)) {
-    		os.println("    if (rand() % 2 == 1) { usleep(1); }");
-	    	os.println("    " + s);
+    	os.println(tabs + "try{"); 
+    	for (String s : instanceValue.processContents.get(p.procId)) {
+	    	os.println(tabs + sing_tab + s);
     	}
+    	tabs = tabs.substring(0, (tabs.length()-sing_tab.length())-1);
+    	os.println(tabs + "}catch(std::exception &e){\n");  
+    	os.println(tabs + sing_tab + "cerr << \"Client failed because \" << e.what() << endl;\n");  
+    	os.println(tabs + sing_tab + "ret = 1;\n");   
+    	os.println(tabs + "}");  
     }
 
 
-//
+/*
+ * for server process (or just process 0) to check the output according to 
+ * the value all other processes has sent it
+ */
 public void incorporateTestWitnesses(PrintStream os) throws java.io.IOException {
         boolean firstVar = true;
-        for (Node n : instanceValue.nodes) {
-          	for (Proc p : instanceValue.processes) {
-          		if (!varsValue.procToLocal.get(p).isEmpty()) {
-		//                for (Var v : varsValue.procToLocal.get(p)) {
-		//                    // (local vars don't have initial values)
-		//                    if (p.procNumber == 0) {
-		//                        os.printf("    *%s_global = %s;\n", v, v);
-		//                    } else {
-		//                        os.printf("    *%s_global = %s;\n", v, v);
-		//                        os.printf("    rdma_operation(app, conn, *conn->peer_mr, %s_global - vars, %s_global, conn->rdma_mr, IBV_WR_RDMA_WRITE, 0);\n", v, v);
-		//                    }
-		                }
-		                os.printf("  }\n");
+    	os.printf(tabs + "SILENT_SYNC(\"end of collecting results\");\n");
+        StringBuilder varFormats = new StringBuilder();
+        for (Proc p : instanceValue.processes) {
+            for (Var v : varsValue.procToLocal.get(p)) {
+                if (firstVar) {
+                    firstVar = false;
+                } else {
+                    varFormats.append(" << \" \" << ");
+                }
+
+                String vf = String.format("\"tr%d:%s=\" << tr%d_%s", p, v, p, v);
+                varFormats.append(vf);
             }
-		
         }
-//
-//	os.printf("  send_flush(peer, cq, conn, true);\n");
-	os.printf("#if DUMP_VARS\n");
-//	for (Proc p : instanceValue.processes) {
-//	    StringBuilder varFormats = new StringBuilder(), varNames = new StringBuilder();
-//	    for (Var v : varsValue.procToShared.get(p)) {
-//		if (firstVar) {
-//		    firstVar = false;
-//		} else {
-//		    varFormats.append(" ");
-//		}
-//		varNames.append(", ");
-//
-//		String vf = String.format("%s=%%lld", v.name);
-//		varFormats.append(vf);
-//		varNames.append("*"+v.name);
-//	    }
-//
-//	    if (p.procNumber == 0) {
-//		os.printf("  if (app == CLIENT) {\n");
-//	    }
-//	    else {
-//		os.printf("  if (app != CLIENT) {\n");
-//	    }
-//	    os.printf("    printf(\"values: %s\\n\"%s);\n", varFormats.toString(), varNames.toString());
-//	    os.printf("  }\n");
-//	}
-	os.printf("#endif\n");
-	throw new RuntimeException("not implemented yet");
+      	if (instanceValue.outputs.size() == 0)
+    	    os.println(tabs + "if (0) ;/*NO EXPECTED OUTPUTS in IR*/");
+      	for (int i = 0; i < instanceValue.outputs.size(); i++) {
+            String output = instanceValue.outputs.get(i);
+            os.printf(tabs + "%sif %s {\n", 
+            		(i == 0)? "" : "}else ",  
+            		output); //TODO: Make sure output is of struct (tr1_c1==2 && tr1_c2==1)  
+            		
+            os.printf(tabs + "cout << FILE_NAME << \":Success\" << endl;\n");
+            os.printf(tabs + "reached: " + output + "    ");
+        }
+        os.printf(tabs + "}else {\n");
+        os.printf(tabs + sing_tab + "cerr << \"UNEXPECTED: << %s;\n", varFormats.toString());
+        os.printf(tabs + "}\n");
 }
 /*
  * Collect results for one thread wait to receive from others,
@@ -171,61 +194,69 @@ public void incorporateTestWitnesses(PrintStream os) throws java.io.IOException 
  */
     public void incorporateTestCollate(PrintStream os, Proc p) throws java.io.IOException {
 
-
-//        boolean firstVar = true;
-//        StringBuilder varFormats = new StringBuilder(),
-//            varNames = new StringBuilder();
-
-       	if(p.procNumber == 0) return;
-        for (Var v : varsValue.procToLocal.get(p)) {
-//        	    Scrap = c1;
-//            POST_PUT(con,tcp_port,Scrap, tr1_c1);
-//            POLL_CQ(con,tcp_port);
-            os.printf("    Scrap = %s;\n", v, v);
-            os.printf("    POST_PUT(con, tcp_port,Scrap,tr%d_%s);\n", p, v);
-            os.printf("    POLL_CQ(con,tcp_port);");
-            os.printf("    ");
-        }
+    	os.printf(tabs + "sleep(10);\n");
+    	os.printf(tabs + "SILENT_SYNC(\"end of operations\");\n");
         
+       	if(p.isServer()) return;
+        for (Var v : varsValue.procToLocal.get(p)) {
+            os.printf(tabs + "Scrap = %s;\n", v, v);
+            os.printf(tabs + "POST_PUT(con, tcp_port,Scrap,tr%d_%s);\n", p, v);
+            os.printf(tabs + "POLL_CQ(con,tcp_port);\n");
+        }
+
+    	os.printf(tabs + "SILENT_SYNC(\"end of collecting results\");\n");
         os.printf("\n    /* Check which output is observed */\n");
 
-
-//        os.printf("    if %s {\n", checkThread(instanceValue.processes.size(), 0));
-//	if (instanceValue.outputs.size() == 0)
-//	    os.println("        if (0) ;");
-//        for (int i = 0; i < instanceValue.outputs.size(); i++) {
-//            String output = instanceValue.outputs.get(i);
-//            os.printf("        %sif %s cnt_%d++;\n", (i == 0)? "" : "else ",  output, instanceValue.outputs.indexOf(output));
-//        }
-//        os.printf("        else {\n");
-//	os.printf("          fprintf(stderr, \"UNEXPECTED: %s\\n\"%s);\n", varFormats.toString(), varNames.toString());
-//	os.printf("          unexpected_cnt++;\n");
-//	os.printf("        }\n");
-//
-//        os.printf("    }\n");
     }
  
 
-//    public void incorporateStats(PrintStream os) throws java.io.IOException {
-////        /* print the execution outputs */
-////
-////        os.printf("    if %s {\n", checkThread(instanceValue.processes.size(), 0));
-////        for (int i = 0; i < instanceValue.outputs.size(); i++) {
-////            String output = instanceValue.outputs.get(i);
-////            os.println("        fprintf(stderr, \"OBSERVED " + output + ": %ld\\n\", cnt_" + instanceValue.outputs.indexOf(output) + ");");
-////        }
-////	os.printf("        fprintf(stderr, \"unexpected count %%ld\\n\", unexpected_cnt);\n");
-////        os.printf("    }\n");
+    public void incorporateStats(PrintStream os) throws java.io.IOException {
+//        /* print the execution outputs */
 //
-//    	throw new RuntimeException("not implemented yet");
-//    }
+//        os.printf("    if %s {\n", checkThread(instanceValue.processes.size(), 0));
+//        for (int i = 0; i < instanceValue.outputs.size(); i++) {
+//            String output = instanceValue.outputs.get(i);
+//            os.println("        fprintf(stderr, \"OBSERVED " + output + ": %ld\\n\", cnt_" + instanceValue.outputs.indexOf(output) + ");\n");
+//        }
+//	os.printf("        fprintf(stderr, \"unexpected count %%ld\\n\", unexpected_cnt);\n");
+//        os.printf("    }\n");
+    	os.printf("#if DUMP_VARS\n");
+//    	for (Proc p : instanceValue.processes) {
+//    	    StringBuilder varFormats = new StringBuilder(), varNames = new StringBuilder();
+//    	    for (Var v : varsValue.procToShared.get(p)) {
+//    		if (firstVar) {
+//    		    firstVar = false;
+//    		} else {
+//    		    varFormats.append(" ");
+//    		}
+//    		varNames.append(", ");
+    //
+//    		String vf = String.format("%s=%%lld", v.name);
+//    		varFormats.append(vf);
+//    		varNames.append("*"+v.name);
+//    	    }
+    //
+//    	    if (p.procNumber == 0) {
+//    		os.printf("  if (app == CLIENT) {\n");
+//    	    }
+//    	    else {
+//    		os.printf("  if (app != CLIENT) {\n");
+//    	    }
+//    	    os.printf("    printf(\"values: %s\\n\"%s);\n", varFormats.toString(), varNames.toString());
+//    	    os.printf("  }\n");
+//    	}
+    	os.printf("#endif\n");
+    	throw new RuntimeException("not implemented yet");
+    }
 
     public void macroExpand(PrintStream os, int payload, String outputName, Proc p) throws java.io.IOException {
     	
         switch (payload) {
-
 		case 3:
 			incorporateSharedVars(os,p);
+		    break;
+		case 4:
+			incorporateAddConnections(os,p);
 		    break;
 	    case 5:
 	        incorporateLocalDecls(os,p);
@@ -245,9 +276,9 @@ public void incorporateTestWitnesses(PrintStream os) throws java.io.IOException 
 		case 15:
 		    incorporateTestCollate(os,p);//incorporate sending results to thread 0
 		    break;
-//		case 16:
-//		    incorporateStats(os);
-//		    break;
+		case 16:
+		    incorporateStats(os);
+		    break;
 	    default:
 		    System.out.printf("warning: unrecognized macro $%d\n", payload);
 	            os.printf("$%d\n", payload);

@@ -36,7 +36,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         this.currentProc = new Proc(procNumber);
         result.processes.add(this.currentProc);
         result.nodeProcesses.get(currentNode.nodeNumber).add(procNumber);
-        result.processContents.put(this.currentProc.procNumber, new ArrayList<>());
+        result.processContents.put(this.currentProc.procId, new ArrayList<>());
 
         visitChildren(ctx);
         return null;
@@ -60,7 +60,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
     @Override
     public Object visitAssignment(TLParser.AssignmentContext ctx) {
-        List<String> insts = result.processContents.get(this.currentProc.procNumber);
+        List<String> insts = result.processContents.get(this.currentProc.procId);
 
         String lhs = ctx.Identifier().getText();
 
@@ -82,7 +82,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
     @Override
     public Object visitPollcq(TLParser.PollcqContext ctx) {
-        List<String> insts = result.processContents.get(this.currentProc.procNumber);
+        List<String> insts = result.processContents.get(this.currentProc.procId);
         insts.add("send_flush(peer, cq, conn, true);");
         //TODO: fix code
         throw new RuntimeException("not implemented yet");
@@ -92,7 +92,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
     @Override
     public Object visitStore(TLParser.StoreContext ctx) {
-        List<String> insts = result.processContents.get(this.currentProc.procNumber);
+        List<String> insts = result.processContents.get(this.currentProc.procId);
 
         String writeVar = ctx.Identifier().getText();
         String rhs = ctx.rhs().getText();
@@ -105,7 +105,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
     @Override
     public Object visitLoad(TLParser.LoadContext ctx) {
-        List<String> insts = result.processContents.get(this.currentProc.procNumber);
+        List<String> insts = result.processContents.get(this.currentProc.procId);
 
         String lhs = ctx.Identifier(0).getText();
         String readVar = ctx.Identifier(1).getText();
@@ -119,7 +119,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
     @Override
     public Object visitGet(TLParser.GetContext ctx) {
-        List<String> insts = result.processContents.get(this.currentProc.procNumber);
+        List<String> insts = result.processContents.get(this.currentProc.procId);
 
         int destProcessNumber = Integer.parseInt(ctx.Number().getText());
         String writeVar = ctx.Identifier(0).getText();
@@ -133,20 +133,20 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         insts.add(newInst);
 
 	Integer c;
-	if (result.processRemoteOpCounts.containsKey(this.currentProc.procNumber)) {
-	    c = result.processRemoteOpCounts.get(this.currentProc.procNumber);
+	if (result.processRemoteOpCounts.containsKey(this.currentProc.procId)) {
+	    c = result.processRemoteOpCounts.get(this.currentProc.procId);
 	} else {
 	    c = new Integer(0);
 	}
 	c = c + 1;
-	result.processRemoteOpCounts.put(this.currentProc.procNumber, c);
+	result.processRemoteOpCounts.put(this.currentProc.procId, c);
 
         return null;
     }
 
     @Override
     public Object visitPut(TLParser.PutContext ctx) {
-        List<String> insts = result.processContents.get(this.currentProc.procNumber);
+        List<String> insts = result.processContents.get(this.currentProc.procId);
 
         int destProcessNumber = Integer.parseInt(ctx.Number().getText());
         String writeVar = ctx.Identifier(0).getText();
@@ -165,7 +165,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
     @Override
     public Object visitCas(TLParser.CasContext ctx) {
-        List<String> insts = result.processContents.get(this.currentProc.procNumber);
+        List<String> insts = result.processContents.get(this.currentProc.procId);
 
         int destProcessNumber = Integer.parseInt(ctx.Number(0).getText());
         String writeVar = ctx.Identifier(0).getText();
@@ -193,7 +193,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
     @Override
     public Object visitRga(TLParser.RgaContext ctx) {
         // W = rga(RW, R)
-        List<String> insts = result.processContents.get(this.currentProc.procNumber);
+        List<String> insts = result.processContents.get(this.currentProc.procId);
 
         int destProcessNumber = Integer.parseInt(ctx.Number(0).getText());
         String writeVar = ctx.Identifier(0).getText();
@@ -292,7 +292,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         visitSimpleExpression(ctx.simpleExpression());
 
         /* Append buffer to result */
-        result.owningProcess.put(ctx.simpleExpression(), currentProc.procNumber);
+        result.owningProcess.put(ctx.simpleExpression(), currentProc.procId);
         result.assertions.add(ctx.simpleExpression());
 
         // System.out.println("Assertion found: " + result.Assertion.toString());

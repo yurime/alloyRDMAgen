@@ -7,12 +7,16 @@ using std::ostream;
 #include <thread>
 //std::thread
 
-
+#include <vector>
+#include <string>
 // //for include ..random
 // #include <stdio.h>      /* printf, scanf, puts, NULL */
-// #include <stdlib.h>     /* srand, rand */
 // #include <time.h>       /* time */
 // //end of for include ..random and sleep(10)
+#include <stdlib.h>     /* atoi */
+
+#include <iostream> // for reading from a file
+#include <fstream> // for reading from a file
 
 #include "rdma_code/resources.h"
 using rdma::Resources;
@@ -26,10 +30,14 @@ using rdma::ConnectionManager;
 #define SERVER_ID 0
 #define PORT 19875
 #define FILE_NAME "manual_attempt1.cpp"//$0;
+
+std::vector<string> thr_ips;
+std::vector<uint32_t> thr_ports;
+char file_line_delim=' ';
 /******************************************************************************************/
 /******************************************************************************************/
 /**                                                                                      **/
-/**                              hash table use case                                     **/
+/**                 manual attempt before test templates creation                        **/
 /**                                                                                      **/
 /******************************************************************************************/
 /******************************************************************************************/
@@ -65,33 +73,40 @@ using rdma::ConnectionManager;
    }
 
 #define POLL_CQ(con,my_name){\
-    if (con.pollCompletion ())  {\
-        cerr << my_name << " poll completion failed 2" << endl;\
-        return 1;\
+        if (con.pollCompletion ())  {\
+            cerr << my_name << " poll completion failed 2" << endl;\
+            return 1;\
+        }\
+    }
+
+#define CONNECT_QP(my_name) {\
+        if (con.connectQP()){\
+            cerr << my_name << " failed to connect QPs" << endl;\
+            return 1;\
         }\
     }
 
 int thr0(){//server(number_of_clients=1){
+    int my_id=0;
+    string whoami="thr"+my_id;
     //--------------------------------------------------------
     //-------------- Set up ----------------------------------
     int ret = 0;
      //$05 // incorporate local declaration;
-    rdma::ConnectionManager con(SERVER_ID, PORT);
+    rdma::ConnectionManager con(SERVER_ID,  thr_ports[SERVER_ID]);
     //$03     // incorporate test init;
     LOCAL_SHARED(Y1, con) = 2;
     LOCAL_SHARED(Y2, con) = 1;
 
-    LOCAL_SHARED(tr1_c1, con) = 1;
-    LOCAL_SHARED(tr1_c2, con) = 1;
+    LOCAL_SHARED(tr1_c1, con) = 0;
+    LOCAL_SHARED(tr1_c2, con) = 0;
 
     
     /* connect the QPs */
-    con.add_connection(1, "");
-    if (con.connectQP())
-    {
-        cerr << "failed to connect QPs" << endl;
-        return 1;
-    }
+    con.add_connection(1, thr_ips[1]);
+
+    CONNECT_QP(whoami);
+
     cout << "connected to queue thr0" << endl;  
     //$10 //incorporate remotely accessed varaibles;
     REMOTE_SHARED(X, con.at(1));
@@ -104,13 +119,13 @@ int thr0(){//server(number_of_clients=1){
     cout << "starting test" << endl;  
 
     try{
-        POST_PUT(con.at(1),PORT,Y1, X);
-        POST_PUT(con.at(1),PORT,Y2, X);
-        POLL_CQ(con.at(1),PORT);
-        POLL_CQ(con.at(1),PORT);
+        POST_PUT(con.at(1),whoami,Y1, X);
+        POST_PUT(con.at(1),whoami,Y2, X);
+        POLL_CQ(con.at(1),whoami);
+        POLL_CQ(con.at(1),whoami);
     }catch(std::exception &e){
         cerr << "Server failed because " << e.what() << endl;
-        ret =1;
+        ret = 1;
     }  
     sleep(10);
 
@@ -129,6 +144,7 @@ int thr0(){//server(number_of_clients=1){
         cout << FILE_NAME  << ":Failed reaching the forbidden output:" << endl;
         cout << "(tr1:c1==2 && tr1:c2==1)" << endl;
     }
+    //$16
     cout << "Y1="<< Y1 << "; Y2="<< Y2 << endl;
     cout << "ended test" << endl;  
     SILENT_SYNC("end of validating results");
@@ -137,24 +153,25 @@ int thr0(){//server(number_of_clients=1){
 
 
 
-int thr0(string server_name, u_int32_t tcp_port, int cliend_id){
+int thr1(){
+    int my_id=1;
+    string whoami="thr"+my_id;
+    int ret = 0;
     //--------------------------------------------------------
     //-------------- Set up ----------------------------------
  
      //$5 // incorporate local declaration;
-
-    rdma::ConnectionManager con(cliend_id, tcp_port);
+    uint64_t c1,c2;
+    rdma::ConnectionManager con(my_id, thr_ports[my_id]);
     //$3   incorporateSharedVarDecls(os);
     LOCAL_SHARED(X, con) = 0;
     LOCAL_SHARED(Scrap, con) = 1;
-    uint64_t c1,c2;
 
-    con.add_connection(0, server_name);
-    if (con.connectQP())
-    {
-        cerr << tcp_port << " failed to connect QPs" << endl;
-        return 1;
-    }
+    //$4   incorporateAddConnections(os);
+    con.add_connection(0, thr_ips[0]);
+
+    CONNECT_QP(whoami);
+    //$10
     REMOTE_SHARED(tr1_c1, con.at(0));
     REMOTE_SHARED(tr1_c2, con.at(0));
     
@@ -163,81 +180,99 @@ int thr0(string server_name, u_int32_t tcp_port, int cliend_id){
     //--------------------------------------------------------
     //-------------- Do something -----------------------------
     //$13 //incorporate test body client;
-    c1 = X;
-    c2 = X;
-    //--------------------------------------------------------
+
+    try{
+       c1 = X;
+       c2 = X;
+    }catch(std::exception &e){
+        cerr << "Client failed because " << e.what() << endl;
+        ret = 1;
+    }    //--------------------------------------------------------
     //-------------- End operations ---------------------------
     
     sleep(10);
     SILENT_SYNC("end of operations");
     //$15// incorporateTestCollate; sending local variables;
     Scrap = c1;
-    POST_PUT(con.at(0),tcp_port,Scrap, tr1_c1);
-    POLL_CQ(con.at(0),tcp_port);
+    POST_PUT(con.at(0),whoami,Scrap, tr1_c1);
+    POLL_CQ(con.at(0),whoami);
 
     Scrap = c2;
-    POST_PUT(con.at(0),tcp_port,Scrap, tr1_c2);
-    POLL_CQ(con.at(0),tcp_port);
+    POST_PUT(con.at(0),whoami,Scrap, tr1_c2);
+    POLL_CQ(con.at(0),whoami);
 
+    //$16
     cout << "X="<< X << "; c1="<< c1 << "; c2="<< c2 <<endl;
     cout << "ended test" << endl;  
     SILENT_SYNC("end of collecting results");
     SILENT_SYNC("end of validating results");
-    return 0;
+    return ret;
 
 }
 
+void parsePortsIpsFromLine(string line){
+    string p_id_s;
+    std::stringstream line_s(line);
+    std::getline(line_s, p_id_s, file_line_delim);
+    int p_id = atoi(p_id_s.c_str());
+    string p_ip,p_port;
+    std::getline(line_s, p_ip, file_line_delim);
+    std::getline(line_s, p_port, file_line_delim);
+    thr_ips[p_id] = p_ip;
+    thr_ports[p_id] = atoi(p_port.c_str());
+}
 
+int parseInputFile(string filename, int expected_num_thrds){
+    std::ifstream myfile(filename);
+    int count_thrs=0;
+    if (! myfile.is_open())  {
+        cerr << "Failed opening file " << filename << endl;
+        return 1;
+    }//else
+
+    string line;
+    while ( getline (myfile,line) ){
+        ++count_thrs;
+        parsePortsIpsFromLine(line);
+    }
+    myfile.close();
+
+    if(count_thrs != expected_num_thrds){
+        cerr << "read file " << filename << " has " << count_thrs << "threads"
+             << " while, " << expected_num_thrds << "threads were expected." << endl;
+        return 1;
+    }//else
+    return 0;
+}
 
 int main (int argc, char *argv[])
 {
-    string server_name;
-    int my_id=SERVER_ID;
-   // int number_of_clients=1;
-    // INITIALIZATION phaze
+    int expected_num_thrds = 2;
 
-    if(argc < 1){
-        cout << "Expected  \"s\" if server or server_ip, folowed by cliend id got no parameters " 
+    if(argc < 3){
+        cout << "Expected: " << argv[0]<< " <my_id> <filename of \"id ip port\" list>" 
              << endl;
         return 1;
     }
     
-    if (*argv[1] != 's'){
-            if(argc < 2){
-                cout << "Expected  \"s\" if server or server_ip, folowed by cliend id got: " 
-                 << endl
-                 << argv[1] <<
-                 endl;
-                 cout << "Did not recieve client id!" << endl;
-                 return 1;
-            }
-
-            cout << argv[2] 
-                << endl;
-            server_name = string(argv[1]); //if not server: 10.10.16.174
-            my_id = std::stoi(argv[2]);
-    }else{
-        //  if(argc < 2){
-        //     cout << "Expected  \"s\" if server, followed by "
-        //         <<"number_of_clients connecting, but didn't recieve a second parameter" << endl;
-        //     return 1;
-        // }
-        // number_of_clients = std::stoi(argv[2]);
+    int thr_id = atoi (argv[1]);
+    string filename=argv[2];
+    if(parseInputFile(filename, expected_num_thrds)){
+        return 1;
     }
-
     rdma::Resources::initialize();
 
     int rc = 0;
-    if (server_name.empty()){
+    if (0==thr_id){
         rc = thr0();
-        std::cout << "server";
+        std::cout << "server thr";
     } else{
-        rc = thr0(server_name, PORT, my_id);
+        rc = thr1();
         std::cout << "client";
     }
 
     // Destruction/cleanup phaze
-
+    cout << " "<< thr_id << " ";
     if(rc){
         cout << " had an error" << endl;
         return 1;
