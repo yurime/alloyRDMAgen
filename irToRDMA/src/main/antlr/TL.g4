@@ -59,35 +59,35 @@ pollcq
  ;
  
 put
- : Put '(' Identifier ','  Number ',' Identifier ')'
+ : Put '(' Identifier '^'  Number ',' Identifier ')'
  ;
 
 get
- : Identifier '=' Get  '(' Identifier ',' Number ')'
+ : Identifier '=' Get  '(' Identifier '^' Number ')'
  ;
 
 rga
- : Identifier '=' Rga '(' Identifier ',' Number ',' Number ')'
+ : Identifier '=' Rga '(' Identifier '^' Number ',' Number ')'
  ;
 
 cas
- : Identifier '=' Cas '(' Identifier ',' Number ',' Number  ',' Number ')'
+ : Identifier '=' Cas '(' Identifier '^' Number ',' Number  ',' Number ')'
  ;
 
 putF
- : PutF '(' Identifier ','  Number ',' Identifier ')'
+ : PutF '(' Identifier '^'  Number ',' Identifier ')'
  ;
 
 getF
- : Identifier '=' GetF  '(' Identifier ',' Number ')'
+ : Identifier '=' GetF  '(' Identifier '^' Number ')'
  ;
 
 rgaF
- : Identifier '=' RgaF '(' Identifier ',' Number ',' Number ')'
+ : Identifier '=' RgaF '(' Identifier '^' Number ',' Number ')'
  ;
 
 casF
- : Identifier '=' CasF '(' Identifier ',' Number ',' Number  ',' Number ')'
+ : Identifier '=' CasF '(' Identifier '^' Number ',' Number  ',' Number ')'
  ;
 
 rhs

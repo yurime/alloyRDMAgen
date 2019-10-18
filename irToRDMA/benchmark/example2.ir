@@ -11,9 +11,9 @@ node 1
 process 1
 shared Y = 2, Z = 1;
 local b;
-put (X,0,Y);
+put (X^0,Y);
 poll_cq (0);
-Z = rga (X,0,1);
+Z = rga (X^0,1);
 poll_cq (0);
 load (b = Z);
 // ---

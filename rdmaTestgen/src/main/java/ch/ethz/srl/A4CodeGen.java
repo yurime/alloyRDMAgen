@@ -95,7 +95,7 @@ class TGWriterImpl extends TGActionImpl implements TGWriter {
     }
 
     @Override public String toString() {
-        return String.format("store %s = %d", wl, wV);
+        return String.format("store (%s = %d)", wl, wV);
     }
 
     public int getWv() { return wV; }
@@ -252,7 +252,7 @@ class TGRead extends TGReaderImpl implements TGAction {
     TGRegister reg;
 
     @Override public String toString() {
-        return String.format("load %s = %s",
+        return String.format("load (%s = %s)",
                              reg==null ? "?" : reg.toString(), getRl());
     }
 }

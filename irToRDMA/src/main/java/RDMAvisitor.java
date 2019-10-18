@@ -1,14 +1,17 @@
 // -*-  indent-tabs-mode:nil; c-basic-offset:4; -*-
 import java.util.List;
+import java.util.Map;
 
-import javax.management.RuntimeErrorException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 
 public class RDMAvisitor extends TLBaseVisitor<Object> {
     InstanceValue result;
     StringBuilder simpleExpressionBuffer, expressionBuffer;
-
+    
+    
     Node currentNode;
     Proc currentProc;
     int counter;
@@ -24,7 +27,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         int nodeNumber = Integer.parseInt(ctx.Number().getText());
         this.currentNode = new Node(nodeNumber);
         result.nodes.add(this.currentNode);
-        result.processContents.put(this.currentNode.nodeNumber, new ArrayList<>());
+        result.nodeProcesses.put(this.currentNode.nodeNumber, new ArrayList<>());
 
         visitChildren(ctx);
         return null;
@@ -82,12 +85,12 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
     @Override
     public Object visitPollcq(TLParser.PollcqContext ctx) {
+        int q = Integer.parseInt(ctx.Number().getText());
         List<String> insts = result.processContents.get(this.currentProc.procId);
-        insts.add("send_flush(peer, cq, conn, true);");
-        //TODO: fix code
-        throw new RuntimeException("not implemented yet");
-        //.visitChildren(ctx);
-        //return null;
+
+        String newInst = String.format("POLL_CQ(con.at(%d),whoami);", q);
+        insts.add(newInst);
+        return null;
     }
 
     @Override
@@ -97,7 +100,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         String writeVar = ctx.Identifier().getText();
         String rhs = ctx.rhs().getText();
 
-        String newInst = String.format("*%s = %s;", writeVar, rhs);
+        String newInst = String.format("%s = %s;", writeVar, rhs);
         insts.add(newInst);
 
         return null;
@@ -110,11 +113,10 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         String lhs = ctx.Identifier(0).getText();
         String readVar = ctx.Identifier(1).getText();
 
-        String newInst = String.format("%s = *%s;", lhs, readVar);
+        String newInst = String.format("%s = %s;", lhs, readVar);
         insts.add(newInst);
-        throw new RuntimeException("not implemented yet");
 
-        //return null;
+        return null;
     }
 
     @Override
@@ -124,23 +126,10 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         int destProcessNumber = Integer.parseInt(ctx.Number().getText());
         String writeVar = ctx.Identifier(0).getText();
         String readVar = ctx.Identifier(1).getText();
-        String readName = "vr" + counter;
-        String writeName = "vw" + counter;
-
 
         String newInst = String.format
-	    ("rdma_operation(app, conn, *conn->peer_mr, %s - vars, %s, conn->rdma_mr, IBV_WR_RDMA_READ, 0);", readVar, writeVar);
+	    ("POST_GET(con.at(%d), whoami, %s, %s);", destProcessNumber, readVar, writeVar);
         insts.add(newInst);
-
-	Integer c;
-	if (result.processRemoteOpCounts.containsKey(this.currentProc.procId)) {
-	    c = result.processRemoteOpCounts.get(this.currentProc.procId);
-	} else {
-	    c = new Integer(0);
-	}
-	c = c + 1;
-	result.processRemoteOpCounts.put(this.currentProc.procId, c);
-
         return null;
     }
 
@@ -151,31 +140,32 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         int destProcessNumber = Integer.parseInt(ctx.Number().getText());
         String writeVar = ctx.Identifier(0).getText();
         String readVar = ctx.Identifier(1).getText();
-        String readName = "vr" + counter;
-        String writeName = "vw" + counter;
 
 
         String newInst = String.format
-                ("rdma_operation(app, conn, *conn->peer_mr, %s - vars, %s, conn->rdma_mr, IBV_WR_RDMA_WRITE, 0);", writeVar, readVar);
+                ("POST_PUT(con.at(%d), whoami, %s, %s);", destProcessNumber, readVar, writeVar);
         insts.add(newInst);
-        throw new RuntimeException("not implemented yet");
-
-        //return null;
+        return null;
     }
 
     @Override
     public Object visitCas(TLParser.CasContext ctx) {
         List<String> insts = result.processContents.get(this.currentProc.procId);
 
-        int destProcessNumber = Integer.parseInt(ctx.Number(0).getText());
+        int destProcessNumber = Integer.parseInt(ctx.Number(0).getText()),
+	        		   cmpVal = Integer.parseInt(ctx.Number(1).getText()),
+	        		   wrtVal = Integer.parseInt(ctx.Number(2).getText());
         String writeVar = ctx.Identifier(0).getText();
         String rwVar = ctx.Identifier(1).getText();
-        String r1Var = ctx.Identifier(2).getText();
-        String r2Var = ctx.Identifier(3).getText();
 
         String newInst = String.format
-            ("rdma_operation_cas(app, conn, *conn->peer_mr, %s - vars, %s, conn->rdma_mr, *%s, *%s);", rwVar, writeVar, r1Var, r2Var);
+            ("POST_CAS(con.at(%d), whoami, %s,%s,%d,%d);", 
+            		destProcessNumber, writeVar, rwVar, cmpVal,wrtVal);
         insts.add(newInst);
+        if(! result.atomicVars.containsKey(destProcessNumber)) {
+        	result.atomicVars.put(destProcessNumber, new HashSet<>());
+        }
+        result.atomicVars.get(destProcessNumber).add(rwVar);
 
         return null;
     }
@@ -195,21 +185,21 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
         // W = rga(RW, R)
         List<String> insts = result.processContents.get(this.currentProc.procId);
 
-        int destProcessNumber = Integer.parseInt(ctx.Number(0).getText());
+        int destProcessNumber = Integer.parseInt(ctx.Number(0).getText()),
+     		   diffV = Integer.parseInt(ctx.Number(1).getText());
         String writeVar = ctx.Identifier(0).getText();
-	String rwVar = ctx.Identifier(1).getText();
-        String readVar = ctx.Identifier(2).getText();
-        String writeName = "vw" + counter;
-        String rwName = "vrw" + counter;
-        String readName = "vr" + counter;
-
+        String rwVar = ctx.Identifier(1).getText();
 
         String newInst = String.format
-            ("rdma_operation_rga(app, conn, *conn->peer_mr, %s - vars, %s, conn->rdma_mr, *%s);", rwVar, writeVar, readVar);
+            ("POST_RGA(con.at(%d), whoami, %s,%s,%d);", 
+            		destProcessNumber, writeVar, rwVar, diffV);
         insts.add(newInst);
-        throw new RuntimeException("not implemented yet");
+        if(! result.atomicVars.containsKey(destProcessNumber)) {
+        	result.atomicVars.put(destProcessNumber, new HashSet<>());
+        }
+        result.atomicVars.get(destProcessNumber).add(rwVar);
 
-        //return null;
+        return null;
     }
  
     @Override

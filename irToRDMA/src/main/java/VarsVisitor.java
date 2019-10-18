@@ -18,25 +18,17 @@ public class VarsVisitor extends TLBaseVisitor<VarsValue> {
 
     @Override
     public VarsValue visitProcess(@NotNull TLParser.ProcessContext ctx) {
-//        if (ctx.decl() == null) {return null;}
-//
-//        VarsValue vars = this.visit(ctx.decl());
-//
-//        final int procNumber = Integer.parseInt(ctx.Number().toString());
-//        Proc proc = dv.processes.stream().filter(p -> p.procNumber == procNumber).findFirst().get();
-//
-//        for (Var v: vars.localVars) {
-//            /* add global variables to verify the results at the end of the execution*/
-//            vars.sharedVars.add(new Var(v.name + "_sender"));
-//            vars.sharedVars.add(new Var(v.name + "_receiver"));
-//            vars.sharedVars.add(new Var(v.name + "_global"));
-//        }
-//        result.procToShared.put(proc, vars.sharedVars);
-//        result.procToLocal.put(proc, vars.localVars);
-//
-//        // System.out.println(result);
-//        return null;
-    	throw new RuntimeException("not implemented yet");
+
+        VarsValue vars = this.visit(ctx.decl());
+
+        final int procNumber = Integer.parseInt(ctx.Number().toString());
+        Proc proc = dv.processes.stream().filter(p -> p.procId == procNumber).findFirst().get();
+
+        result.procToShared.put(proc, vars.sharedVars);
+        result.procToLocal.put(proc, vars.localVars);
+
+        // System.out.println(result);
+        return null;
     }
 
     @Override
@@ -74,7 +66,7 @@ public class VarsVisitor extends TLBaseVisitor<VarsValue> {
         return ldResult;
     }
 
-    int sharedVarCounter = 3;
+    int sharedVarCounter = 1;
     @Override
     public VarsValue visitSharedDecl(@NotNull TLParser.SharedDeclContext ctx) {
         VarsValue sdResult = new VarsValue();

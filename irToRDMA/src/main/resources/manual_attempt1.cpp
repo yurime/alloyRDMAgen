@@ -29,7 +29,9 @@ using rdma::ConnectionManager;
 
 #define SERVER_ID 0
 #define PORT 19875
-#define FILE_NAME "manual_attempt1.cpp"//$0;
+//$00;
+#define FILE_NAME "manual_attempt1.cpp"
+#define NUM_THREADS 2 //also machines
 
 std::vector<string> thr_ips;
 std::vector<uint32_t> thr_ports;
@@ -41,6 +43,11 @@ char file_line_delim=' ';
 /**                                                                                      **/
 /******************************************************************************************/
 /******************************************************************************************/
+#define LOCAL_AT_SHARED(varName,con) \
+        rdma::AtomicLocalConData<uint64_t>  varName##_res(#varName);\
+        auto& varName = varName##_res.get(); \
+        con.addLocalResource(varName##_res);\
+        varName
 
 #define LOCAL_SHARED(varName,con) \
         rdma::LocalConData<uint64_t>  varName##_res(#varName);\
@@ -72,6 +79,21 @@ char file_line_delim=' ';
        }\
    }
 
+#define POST_CAS(con,my_name,fromVarName,targVarName,old_v,new_v){\
+        if (con.postCAS(targVarName##_res, fromVarName##_res,old_v,new_v))   {\
+                cerr << my_name << " failed to post postREAD request" << endl;\
+                return 1;\
+       }\
+   }
+
+#define POST_RGA(con,my_name,fromVarName,targVarName,diff_v){\
+        if (con.postFetchAndAdd(targVarName##_res, fromVarName##_res,diff_v))   {\
+                cerr << my_name << " failed to post postREAD request" << endl;\
+                return 1;\
+       }\
+   }
+
+
 #define POLL_CQ(con,my_name){\
         if (con.pollCompletion ())  {\
             cerr << my_name << " poll completion failed 2" << endl;\
@@ -101,7 +123,7 @@ int thr0(){//server(number_of_clients=1){
     LOCAL_SHARED(tr1_c1, con) = 0;
     LOCAL_SHARED(tr1_c2, con) = 0;
 
-    
+    //$04 //incorporateAddConnections
     /* connect the QPs */
     con.add_connection(1, thr_ips[1]);
 
@@ -138,13 +160,12 @@ int thr0(){//server(number_of_clients=1){
     SILENT_SYNC("end of collecting results");
   
     //$14 //incorporateTestWitnesses(os);  
-    if( ! (tr1_c1==2 && tr1_c2==1) ){
+    if(  (tr1_c1==2 && tr1_c2==1) ){
         cout << FILE_NAME << ":Success" << endl;
     }else{
-        cout << FILE_NAME  << ":Failed reaching the forbidden output:" << endl;
-        cout << "(tr1:c1==2 && tr1:c2==1)" << endl;
+        cout << "tr1:c1= "<< tr1_c1 << " " << "tr1:c2=" <<  tr1_c1 << endl;
     }
-    //$16
+    //$16 incorporateStats
     cout << "Y1="<< Y1 << "; Y2="<< Y2 << endl;
     cout << "ended test" << endl;  
     SILENT_SYNC("end of validating results");
@@ -179,8 +200,7 @@ int thr1(){
     
     //--------------------------------------------------------
     //-------------- Do something -----------------------------
-    //$13 //incorporate test body client;
-
+    //$13 //emitPerProcTestBody
     try{
        c1 = X;
        c2 = X;
@@ -201,7 +221,7 @@ int thr1(){
     POST_PUT(con.at(0),whoami,Scrap, tr1_c2);
     POLL_CQ(con.at(0),whoami);
 
-    //$16
+    //$16 incorporateStats
     cout << "X="<< X << "; c1="<< c1 << "; c2="<< c2 <<endl;
     cout << "ended test" << endl;  
     SILENT_SYNC("end of collecting results");
@@ -247,7 +267,7 @@ int parseInputFile(string filename, int expected_num_thrds){
 
 int main (int argc, char *argv[])
 {
-    int expected_num_thrds = 2;
+    int expected_num_thrds = NUM_THREADS;
 
     if(argc < 3){
         cout << "Expected: " << argv[0]<< " <my_id> <filename of \"id ip port\" list>" 
@@ -263,6 +283,7 @@ int main (int argc, char *argv[])
     rdma::Resources::initialize();
 
     int rc = 0;
+    //$02 //incorporateMain
     if (0==thr_id){
         rc = thr0();
         std::cout << "server thr";
