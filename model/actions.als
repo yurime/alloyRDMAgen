@@ -98,9 +98,16 @@ abstract sig nA extends Action{
 	instr : one Instruction,
 	instr_sw: lone nA,
     nic_ord_sw: set nA,
-    poll_cq_sw: lone poll_cq
+    poll_cq_sw: lone poll_cq,
+	ipo: set nA
 }
 fact {all a:nA| (a in RDMAaction)}
+fact {all a1,a2:nA| 
+			(a2 in a1.ipo) iff (
+				(a2.instr.actions & Sx) 
+                       in (a1.instr.actions & Sx).po_tc
+			)
+}
 
 //fact{all na:nA | not na in na.^nic_ord_sw}
 //fact {nA in sw[nA] + sw[Sx] }//YM: all nA are connected by some sw (at the very least instr_sw) (is this forall exists?)

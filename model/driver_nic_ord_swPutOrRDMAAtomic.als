@@ -1,6 +1,6 @@
-open test_rules_nic_ord_swPutOrRDMAAtomic  as t
-
-/** Genereal test requirement or optimizations**/
+open base_sw_rules as b
+open rdma_execution as e
+/** General test requirement or optimizations**/
 
 // eliminate unused nodes 
 fact {Node = host[Thr]}
@@ -35,7 +35,7 @@ fact { all w: Writer| 0 <=  wV[w] and wV[w] < #W}
 /** Specific test requirement or optimizations**/
 
 // Prevent writing of the same value to have an observalble effect
-fact{not wV[nA1Pivot]=wV[nA2Pivot]}
+fact{wV[nA1Pivot]=0 and 1=wV[nA2Pivot]}
 
 //The Witness definition
 fact {Witness in nA1Pivot.rf and 
@@ -83,19 +83,3 @@ fact { no Dummy }
 fact{RDMAExecution_prime.Consistent=True}
 
 
-pred oneThread { #Thr = 1 }
-pred twoThreads { #Thr = 2 }
-
-// sanity
-//check {RDMAExecution.Consistent=False} expect 0
-
-/* Properties of the test */
-pred show { 
-            //#Rcas = 0 and
-            //#Rga = 0 and
-            //#Action = 7 and
-            #Thr = 2
-        }
-
-
-run {show} for 12

@@ -108,37 +108,25 @@ fact{all a:nA | not a in nic_ord_sw[a]}
 
 // predicates to define when nic_ord_sw is legal
 pred putOrRDMAatomic [na1:nA,na2:nA] {
-  let sx1=actions[instr[na1]]&Sx,
-       sx2=actions[instr[na2]]&Sx {
-           (sameOandD[na1,na2]) and//forcing same queuepair and starting thread
-           (sx2 in sx1.po_tc)  and 
+           (na2 in na1.ipo) and//forcing same queuepair and starting thread
   	       (remoteMachineAction[na1]) and   // sx1----->nWpq
 	       (remoteMachineAction[na2]) and   // ↓po         ↓nic_ord_sw
-	       (not na1 in nRpq)                // sx2----->na2 
-  }//end of let 
+	       (not na1 in nRpq)                         // sx2----->na2 
 }
 
 pred putLocalPart [na1:nA,na2:nA]{
-  let sx1=actions[instr[na1]]&Sx,
-       sx2=actions[instr[na2]]&Sx,
-       na1r=actions[instr[na1]]&nWpq,
-       na2r=actions[instr[na2]]&nWpq      { 
-           (sameOandD[na1r,na2r]) and//forcing same queuepair and starting thread
-           (sx2 in sx1.po_tc)  and                        // sx1----->nRp
-	       instr[na1]+instr[na2] in Put+PutF and  // ↓po         ↓nic_ord_sw
-	      (na2+na1 in nRp)                                 // sx2----->nRp 
-  }//end of let 
+           (na2 in na1.ipo) and//forcing same queuepair and starting thread
+	      (na2+na1 in nRp)		// sx1----->nRp
+											// ↓po         ↓nic_ord_sw
+									        // sx2----->nRp 
 }
 
 
 pred nicFence [na1:nA,na2:nA] {
-  let sx1=actions[instr[na1]]&Sx,
-       sx2=actions[instr[na2]]&Sx {
-           (sameOandD[na1,na2]) and//forcing same queuepair and starting thread
-           (sx2 in sx1.po_tc)  and                   // sx1-->nRpq-->nWp
-	       (na2 in nF) and (na1 in nWp) and  // ↓po                  ↓nic_ord_sw
-	       (instr[sx1] in Get+GetF)                 // sx2-------------->nF
-   }                                                              
+			(na2 in na1.ipo) and//forcing same queuepair and starting thread
+            (na2 in nF)  // sx1-->nRpq-->nWp
+	        				  // ↓po                  ↓nic_ord_sw
+	       	                  // sx2-------------->nF                                                    
 }
 
 // (na1,na2) in nic_ord_sw definition (3 cases)
@@ -158,22 +146,15 @@ fact{all disj na1,na2:nA |
 //------------
 fact{poll_cq_sw=~co_poll_cq_sw}
 
-
-fact{all disj na2:nA, pcq:poll_cq | 
-(pcq in poll_cq_sw[na2])
-iff 
-  (some na1:nA,sx:Sx { //sx->na1->na2 ---pol_cq_sw---> pcq
-      (na2 in instr_sw[na1] ) and 
-      (na1 in instr_sw[sx] ) and
-      sameOandD[pcq,sx] and
-      (pcq in sx.po_tc) and
-          (// num act submitted = num actions acknowledged
-           #(sx.^~po_tc & {a:Sx | sameOandD[a,sx]}) 
-                = #(pcq.^~po_tc & {a:poll_cq | sameOandD[a,pcq]})
-           )
-  }//end of some na1,sx
-  )
+fact{all disj na1, na2:nA, pcq2:poll_cq | 
+((pcq2 in na2.poll_cq_sw) 
+  and (na2 in na1.ipo))
+=> (some pcq1:poll_cq| 
+        (pcq2 in pcq1.po)
+        and (pcq1=na1.poll_cq_sw)
+      )
 }
+
 
 fact {all nr:(nA&Reader),nw:(nA&Writer) | nw in nr.instr_sw => wV[nw]=rV[nr]}
 
