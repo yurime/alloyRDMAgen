@@ -36,6 +36,8 @@ fact { all w: Writer| 0 <=  wV[w] and wV[w] < #W}
 
 // Prevent writing of the same value to have an observalble effect
 fact{wV[nA1Pivot]=0 and 1=wV[nA2Pivot]}
+fact{wl[nA1Pivot]=wl[nA2Pivot]}
+fact{not nA2Pivot in Init}
 
 //The Witness definition
 fact {Witness in nA1Pivot.rf and 
