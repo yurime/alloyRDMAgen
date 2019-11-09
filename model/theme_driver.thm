@@ -57,14 +57,20 @@
    <type name="d/b/e/sw/a/U"/>
    <type name="d/b/e/sw/a/W"/>
    <set name="Consistent" type="d/b/e/Boolean"/>
-   <set name="d/b/nA1Pivot" type="d/b/e/sw/a/Action"/>
-   <set name="d/b/nA2Pivot" type="d/b/e/sw/a/Action"/>
    <set name="d/b/nA_prime" type="d/b/e/sw/a/nA"/>
    <set name="d/b/RDMAaction_prime" type="d/b/e/sw/a/Action"/>
-   <set name="d/b/Witness" type="d/b/e/sw/a/Action"/>
    <set name="d/b/e/sw/a/RDMAaction" type="d/b/e/sw/a/Action"/>
    <set name="d/b/e/sw/a/Reader" type="d/b/e/sw/a/Action"/>
    <set name="d/b/e/sw/a/Writer" type="d/b/e/sw/a/Action"/>
+</node>
+
+<node color="Blue">
+   <set name="d/b/nA1Pivot" type="d/b/e/sw/a/Action"/>
+   <set name="d/b/Witness" type="d/b/e/sw/a/Action"/>
+</node>
+
+<node color="Red">
+   <set name="d/b/nA2Pivot" type="d/b/e/sw/a/Action"/>
 </node>
 
 <edge visible="no">
@@ -77,7 +83,6 @@
    <relation name="hbqp"> <type name="d/b/e/sw/a/Action"/> <type name="d/b/e/sw/a/Action"/> </relation>
    <relation name="hbs"> <type name="d/b/e/sw/a/Action"/> <type name="d/b/e/sw/a/Action"/> </relation>
    <relation name="ipo"> <type name="d/b/e/sw/a/nA"/> <type name="d/b/e/sw/a/nA"/> </relation>
-   <relation name="mo"> <type name="d/b/e/sw/a/Action"/> <type name="d/b/e/sw/a/Action"/> </relation>
    <relation name="mos"> <type name="d/b/e/sw/a/Action"/> <type name="d/b/e/sw/a/Action"/> </relation>
    <relation name="po_tc"> <type name="d/b/e/sw/a/LocalCPUaction"/> <type name="d/b/e/sw/a/LocalCPUaction"/> </relation>
    <relation name="sw"> <type name="d/b/e/sw/a/Action"/> <type name="d/b/e/sw/a/Action"/> </relation>

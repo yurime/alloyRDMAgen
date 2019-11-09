@@ -3,7 +3,13 @@ open execution as e
 one sig RDMAExecution extends Execution{
 
 }{
-  hb = ^(po_tc+rf+sw)
+  {all disj w1,w2:Writer | 
+                 (host[wl[w1]]=host[wl[w2]]) 
+                 <=> 
+                ((w1 in w2.mo) or (w2 in w1.mo))
+   }
+
+  hb = ^(po_tc+rf+sw+mos)
 
 //hbqp definition
   hbqp in hb
@@ -18,7 +24,7 @@ one sig RDMAExecution extends Execution{
   }// end hbqp defintion
 
 //hbs definition 
-  hbs=^(hbqp+mos)
+  hbs=^(po_tc+rf +sw_s+mos)
 
 }// end of sig execution
 

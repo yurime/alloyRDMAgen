@@ -4,63 +4,86 @@ open actions as a
 
 fact{all a:Sx |
 	a.sw = a.instr_sw
+and
+	a.sw_s = a.instr_sw
 }
 
 fact{all a:nA |
 	a.sw = a.nic_ord_sw+a.poll_cq_sw+a.instr_sw
+//and 	a.sw_s = a.nic_ord_sw_s+a.poll_cq_sw_s+a.instr_sw
 }
+/*
+fact{
+	poll_cq_sw_s= ((^(instr_sw-(nWpq->Action))).poll_cq_sw) + (instr_sw.poll_cq_sw) 
+}
+
+fact{all a:nA |
+	(a in nWpq) => a.nic_ord_sw_s= a.nic_ord_sw
+    else a.nic_ord_sw_s=none
+}
+*/
 //-----------
 /**instr-sw**/
 //-----------
 fact{all put:Put | // sx->nrp->nwpq
   let sx=actions[put] & Sx_put, 
       nrp=actions[put] & nRp,
-      nwpq=actions[put] & nWpq{
+      nwpq=actions[put] & nWpq,
+      nex=actions[put] & nEx{
           instr_sw[sx] = nrp and
           instr_sw[nrp] = nwpq and
-		   #(instr_sw[nwpq])=0
-     }
+		  instr_sw[nwpq]=nex and 
+          #(instr_sw[nex])=0     
+      }
 }
 
 
 fact{all get:Get | // sx->nrpq->nwp
   let sx=actions[get] & Sx_get, 
       nrpq=actions[get] & nRpq,
-      nwp=actions[get] & nWp{
+      nwp=actions[get] & nWp,
+      nex=actions[get] & nEx{
           instr_sw[sx] = nrpq and
           instr_sw[nrpq] = nwp and
-		   #(instr_sw[nwp])=0
+		      instr_sw[nwp]=nex and 
+          #(instr_sw[nex])=0
       }
 }
 
 fact{all rga:Rga | // sx->nrwpq->nwp
   let sx=actions[rga] & Sx_rga, 
       nrwpq=actions[rga] & nRWpq,
-      nwp=actions[rga] & nWp{
+      nwp=actions[rga] & nWp,
+      nex=actions[rga] & nEx{
           instr_sw[sx] = nrwpq and
           instr_sw[nrwpq] = nwp and
-		   #(instr_sw[nwp])=0
+		  instr_sw[nwp]=nex and 
+          #(instr_sw[nex])=0
      }
 }
 
 fact{all cas:Cas | // sx->nrwpq->nwp
   let sx=actions[cas] & Sx_cas, 
       nrwpq=actions[cas] & nRWpq,
-      nwp=actions[cas] & nWp{
+      nwp=actions[cas] & nWp,
+      nex=actions[cas] & nEx{
           instr_sw[sx] = nrwpq and
           instr_sw[nrwpq] = nwp and
-		   #(instr_sw[nwp])=0
+		  instr_sw[nwp]=nex and 
+          #(instr_sw[nex])=0
      }
 }
 fact{all put:PutF |// sx->nf->nrp->nwpq
   let sx=actions[put] & Sx_put, 
       nrp=actions[put] & nRp,
       nf=actions[put] & nF,
-      nwpq=actions[put] & nWpq{
+      nwpq=actions[put] & nWpq,
+      nex=actions[put] & nEx{
           instr_sw[sx] = nf and
           instr_sw[nf] = nrp and
           instr_sw[nrp] = nwpq and
-		   #(instr_sw[nwpq])=0
+		  instr_sw[nwpq]=nex and 
+          #(instr_sw[nex])=0
      }
 }
 
@@ -68,11 +91,13 @@ fact{all get:GetF | // sx->nf->nrpq->nwp
   let sx=actions[get] & Sx_get, 
       nrpq=actions[get] & nRpq,
       nf=actions[get] & nF,
-      nwp=actions[get] & nWp{
+      nwp=actions[get] & nWp,
+      nex=actions[get] & nEx{
           instr_sw[sx] = nf and
           instr_sw[nf] = nrpq and
           instr_sw[nrpq] = nwp and
-		   #(instr_sw[nwp])=0
+		      instr_sw[nwp]=nex and 
+          #(instr_sw[nex])=0
       }
 }
 
@@ -80,11 +105,13 @@ fact{all rga:RgaF | // sx->nf->nrwpq->nwp
   let sx=actions[rga] & Sx_rga, 
       nrwpq=actions[rga] & nRWpq,
       nf=actions[rga] & nF,
-      nwp=actions[rga] & nWp{
+      nwp=actions[rga] & nWp,
+      nex=actions[rga] & nEx{
           instr_sw[sx] = nf and
           instr_sw[nf] = nrwpq and
           instr_sw[nrwpq] = nwp and
-		   #(instr_sw[nwp])=0
+		      instr_sw[nwp]=nex and 
+          #(instr_sw[nex])=0
      }
 }
 
@@ -92,11 +119,13 @@ fact{all cas:CasF | // sx->nf->nrwpq->nwp
   let sx=actions[cas] & Sx_cas, 
       nrwpq=actions[cas] & nRWpq,
       nf=actions[cas] & nF,
-      nwp=actions[cas] & nWp{
+      nwp=actions[cas] & nWp,
+      nex=actions[cas] & nEx{
           instr_sw[sx] = nf and
           instr_sw[nf] = nrwpq and
           instr_sw[nrwpq] = nwp and
-		   #(instr_sw[nwp])=0
+		      instr_sw[nwp]=nex and 
+          #(instr_sw[nex])=0
      }
 }
 
@@ -144,14 +173,21 @@ fact{all disj na1,na2:nA |
 //------------
 /** poll_cq_sw **/
 //------------
+
 fact{poll_cq_sw=~co_poll_cq_sw}
 
-fact{all disj na1, na2:nA, pcq2:poll_cq | 
-((pcq2 in na2.poll_cq_sw) 
+
+fact{all disj na:nA, pcq:poll_cq  | 
+          pcq=na.poll_cq_sw => pcq in (na.instr.actions & Sx).po_tc
+}
+
+
+fact{all disj na1, na2:nEx, pcq2:poll_cq | 
+(pcq2=na2.poll_cq_sw
   and (na2 in na1.ipo))
 => (some pcq1:poll_cq| 
-        (pcq2 in pcq1.po)
-        and (pcq1=na1.poll_cq_sw)
+        (pcq2 in pcq1.po_tc)
+        and pcq1=na1.poll_cq_sw
       )
 }
 
@@ -166,31 +202,14 @@ fact {all nr:(nA&Reader),nw:(nA&Writer) | nw in nr.instr_sw => wV[nw]=rV[nr]}
 run p1 for 8
 */
 
+pred p2 { 
+           #PutF = 1 and
+            #Thr = 2}
+
 check{not cyclic[sw]} for 10 expect 0
 
-pred getThenPutF {  // needs at least 12
-            #Get > 0 and
-            #PutF > 0 and
-            #poll_cq = 2  and
-			 #(Sx & Sx_get.po_tc) > 0 and
-			 #(poll_cq & Sx_get.po_tc) > 0 and
-            #Thr = 2}
-
-pred putAfterPut { 
-            #Put >1 and
-            #poll_cq >1   and
-			 #(Sx & Sx_put.po_tc) > 0 and
-			 #(poll_cq & Sx_put.po_tc) > 0 and
-            #Thr = 2}
-
-
-pred putAndCas { 
-           #Put = 1 and
-            #Cas = 1 and
-            #Thr = 2}
-
-run getThenPutF for 12
-run putAfterPut for 10
-run putAndCas for 8
-
+run getThenPutF for 13
+run putAfterPut for 12
+run putAndCas for 10
+run p2 for 8
 

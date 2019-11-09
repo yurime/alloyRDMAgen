@@ -39,10 +39,6 @@ fact{wV[nA1Pivot]=0 and 1=wV[nA2Pivot]}
 fact{wl[nA1Pivot]=wl[nA2Pivot]}
 fact{not nA2Pivot in Init}
 
-//The Witness definition
-fact {Witness in nA1Pivot.rf and 
-        Witness in nA2Pivot.(RDMAExecution_prime.hbs)
-}
 
 /*
 //The Witness op2: Theoreticaly should be possible
@@ -77,6 +73,14 @@ fact{all i:Instruction,
 
 
 fact{all disj r1,r2:R| not reg[r1]=reg[r2]}
+
+
+fact{all a:Action| let e=RDMAExecution |
+							(a in Witness.sw) or (Witness in a.(e.hb))
+							or (a in nA1Pivot.sw) or (nA1Pivot in a.(e.hb))
+							or (a in nA2Pivot.sw) or (nA2Pivot in a.(e.hb))
+     
+}
 
 /* removes Univ objects */
 sig Dummy {}

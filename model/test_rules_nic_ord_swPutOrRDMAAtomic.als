@@ -63,6 +63,10 @@ fact{let e=RDMAExecution_prime |
   (e.hbs)=^((e.hbqp)+(e.mos))
 }// end of sig RDMAexecution_prime rules
 
+//The Witness definition
+fact {Witness in nA1Pivot.rf and 
+        Witness in nA2Pivot.(RDMAExecution_prime.hbs)
+}
 
 pred oneThread { #Thr = 1 }
 pred twoThreads { #Thr = 2 }

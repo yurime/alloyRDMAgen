@@ -20,17 +20,13 @@ abstract sig Execution {
  Consistent: Boolean
 }{
 //mo basic definition
-  {all disj w1,w2:Writer | 
-                 (host[wl[w1]]=host[wl[w2]]) 
-                 <=> 
-                ((w1 in w2.mo) or (w2 in w1.mo))
-   }
+
    {mo=^mo}
    {not cyclic[mo]}
 
 //mo_s definition
    mos in mo
-  {all w1,w2:Writer| w2 in w1.mos iff w1 in nRWpq+U+nWp}
+  {all w1,w2:Writer| w2 in w1.mos iff w1 in nRWpq+U}
 
   {
    (cyclic_MoThenHbs or readAndMissPrevWriteInHbs
@@ -49,7 +45,7 @@ pred hb_cyclic[e:Execution] {
 }
 
 pred cyclic_MoThenHbs[e:Execution] {
-      cyclic[(e.mo).(e.hbs)]//consistentcy 1
+      cyclic[(e.mo)+(e.hbs)]//consistentcy 1
 }
 
 pred readAndMissPrevWriteInHbs [e:Execution] {

@@ -49,7 +49,8 @@ fact{~rf=corf}
 sig Init extends W{}
 
 sig RDMAaction in Action {
-    sw : set Action
+    sw : set Action,
+    sw_s : set Action
 }
 
 abstract sig LocalCPUaction extends Action{
@@ -98,7 +99,9 @@ abstract sig nA extends Action{
 	instr : one Instruction,
 	instr_sw: lone nA,
     nic_ord_sw: set nA,
+    nic_ord_sw_s: set nA,
     poll_cq_sw: lone poll_cq,
+    poll_cq_sw_s: lone poll_cq,
 	ipo: set nA
 }
 fact {all a:nA| (a in RDMAaction)}
@@ -149,9 +152,14 @@ sig nF extends nA {}
 fact {all f:nF| not(f in Writer) and not (f in Reader)}
 fact {all a: nF| localMachineAction[a]}
 
+
+sig nEx extends nA {}
+fact {all a:nEx| not(a in Writer) and not (a in Reader)}
+fact {all a: nEx| localMachineAction[a]}
+
 /*poll_cq*/
 sig poll_cq extends LocalCPUaction {
-  co_poll_cq_sw:one nA
+  co_poll_cq_sw:one nEx
 }
 fact {all p:poll_cq| not(p in Writer) and not (p in Reader)}
 fact {all a:poll_cq| not (a in RDMAaction)}
@@ -167,10 +175,11 @@ fact {all a: Sx| all i: Instruction | instr[a] = i iff a in i.actions}
 fact {all a: nA| all i: Instruction | instr[a] = i iff a in i.actions}
 
 sig Put extends Instruction {}{ 
-  #actions = 3 and 
+  #actions = 4 and 
   #(actions & Sx_put) = 1 and 
   #(actions & nRp) = 1 and 
   #(actions & nWpq) = 1    and 
+  #(actions & nEx) = 1  and  
   (let sx= actions&Sx,
    nrp=actions & nRp,
       nwpq=actions & nWpq{
@@ -180,10 +189,11 @@ sig Put extends Instruction {}{
 }
 
 sig Get extends Instruction {}{
-  #actions = 3 and 
+  #actions = 4 and 
   #(actions & Sx_get) = 1 and 
   #(actions & nRpq) = 1 and 
   #(actions & nWp) = 1   and 
+  #(actions & nEx) = 1  and  
   (let sx= actions&Sx,
    nrpq=actions & nRpq,
       nwp=actions & nWp{
@@ -193,10 +203,11 @@ sig Get extends Instruction {}{
 }
 
 sig Rga extends Instruction {}{
-  #actions = 3 and 
+  #actions = 4 and 
   #(actions & Sx_rga) = 1 and 
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1  and 
+  #(actions & nEx) = 1  and 
   (let sx= actions&Sx,
    nrwpq=actions & nRWpq,
       nwp=actions & nWp{
@@ -206,10 +217,11 @@ sig Rga extends Instruction {}{
 }
 
 sig Cas extends Instruction {}{
-  #actions = 3 and 
+  #actions = 4 and 
   #(actions & Sx_cas) = 1 and 
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1   and 
+  #(actions & nEx) = 1  and 
   (let sx= actions&Sx,
    nrwpq=actions & nRWpq,
       nwp=actions & nWp{
@@ -220,11 +232,12 @@ sig Cas extends Instruction {}{
 
 // instructions with a nic fence
 sig PutF extends Instruction {}{ 
-  #actions = 4 and 
+  #actions = 5 and 
   #(actions & Sx_put) = 1 and 
   #(actions & nF) = 1 and 
   #(actions & nRp) = 1 and 
   #(actions & nWpq) = 1   and 
+  #(actions & nEx) = 1  and 
   (let sx= actions&Sx,
    nrp=actions & nRp,
       nwpq=actions & nWpq{
@@ -233,11 +246,12 @@ sig PutF extends Instruction {}{
    })
 }
 sig GetF extends Instruction {}{
-  #actions = 4 and 
+  #actions = 5 and 
   #(actions & Sx_get) = 1 and 
   #(actions & nF) = 1 and  
   #(actions & nRpq) = 1 and 
   #(actions & nWp) = 1 and 
+  #(actions & nEx) = 1  and 
   (let  sx= actions&Sx,
    nrpq=actions & nRpq,
         nwp=actions & nWp{
@@ -246,11 +260,12 @@ sig GetF extends Instruction {}{
    })
 }
 sig RgaF extends Instruction {}{
-  #actions = 4 and 
+  #actions = 5 and 
   #(actions & Sx_rga) = 1 and 
   #(actions & nF) = 1 and  
   #(actions & nRWpq) = 1 and 
-  #(actions & nWp) = 1   and 
+  #(actions & nWp) = 1   and
+  #(actions & nEx) = 1  and 
   (let sx= actions&Sx,
    nrwpq=actions & nRWpq,
       nwp=actions & nWp{
@@ -260,11 +275,12 @@ sig RgaF extends Instruction {}{
 }
 
 sig CasF extends Instruction {}{
-  #actions = 4 and 
+  #actions = 5 and 
   #(actions & Sx_cas) = 1 and
   #(actions & nF) = 1 and   
   #(actions & nRWpq) = 1 and 
   #(actions & nWp) = 1  and 
+  #(actions & nEx) = 1  and 
   (let sx= actions&Sx,
    nrwpq=actions & nRWpq,
       nwp=actions & nWp{
@@ -322,5 +338,29 @@ pred p {
            #Put = 1 and
             #Thr = 2}
 
+pred getThenPutF {  // needs at least 12
+            #Get > 0 and
+            #PutF > 0 and
+            #poll_cq = 2  and
+			 #(Sx & Sx_get.po_tc) > 0 and
+			 #(poll_cq & Sx_get.po_tc) > 0 and
+            #Thr = 2}
+
+pred putAfterPut { 
+            #Put >1 and
+            #poll_cq >1   and
+			 #(Sx & Sx_put.po_tc) > 0 and
+			 #(poll_cq & Sx_put.po_tc) > 0 and
+            #Thr = 2}
+
+
+pred putAndCas { 
+           #Put = 1 and
+            #Cas = 1 and
+            #Thr = 2}
+
+run getThenPutF for 13
+run putAfterPut for 12
+run putAndCas for 10
 
 run p for 8

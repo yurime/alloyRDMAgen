@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<alloy>
+
+<view>
+
+<projection> <type name="stability_check/Execution"/> </projection>
+
+<defaultnode/>
+
+<defaultedge/>
+
+<node>
+   <type name="Int"/>
+   <type name="String"/>
+   <type name="Univ"/>
+   <type name="univ"/>
+   <type name="seq/Int"/>
+   <type name="stability_check/Action"/>
+   <type name="stability_check/Boolean"/>
+   <type name="stability_check/Execution"/>
+   <type name="stability_check/False"/>
+   <type name="stability_check/Init"/>
+   <type name="stability_check/LocalCPUaction"/>
+   <type name="stability_check/MemoryLocation"/>
+   <type name="stability_check/nA"/>
+   <type name="stability_check/nF"/>
+   <type name="stability_check/Node"/>
+   <type name="stability_check/nR"/>
+   <type name="stability_check/nRp"/>
+   <type name="stability_check/nRpq"/>
+   <type name="stability_check/nRWpq"/>
+   <type name="stability_check/nW"/>
+   <type name="stability_check/nWp"/>
+   <type name="stability_check/nWpq"/>
+   <type name="stability_check/poll_cq"/>
+   <type name="stability_check/R"/>
+   <type name="stability_check/RDMAExecution"/>
+   <type name="stability_check/Register"/>
+   <type name="stability_check/Sx"/>
+   <type name="stability_check/Thr"/>
+   <type name="stability_check/True"/>
+   <type name="stability_check/U"/>
+   <type name="stability_check/W"/>
+   <set name="$Test_a_VAR" type="stability_check/Register"/>
+   <set name="$Test_b_VAR" type="stability_check/Register"/>
+   <set name="$Test_iv0" type="stability_check/Init"/>
+   <set name="$Test_iv2" type="stability_check/Init"/>
+   <set name="$Test_iv3" type="stability_check/Init"/>
+   <set name="$Test_lr1" type="stability_check/R"/>
+   <set name="$Test_lr6" type="stability_check/R"/>
+   <set name="$Test_n0" type="stability_check/Node"/>
+   <set name="$Test_n1" type="stability_check/Node"/>
+   <set name="$Test_p0" type="stability_check/Thr"/>
+   <set name="$Test_p1" type="stability_check/Thr"/>
+   <set name="$Test_pcq5" type="stability_check/poll_cq"/>
+   <set name="$Test_pcq6" type="stability_check/poll_cq"/>
+   <set name="$Test_vrp4" type="stability_check/nRp"/>
+   <set name="$Test_vrwpq5" type="stability_check/nRWpq"/>
+   <set name="$Test_vsx4" type="stability_check/Sx"/>
+   <set name="$Test_vsx5" type="stability_check/Sx"/>
+   <set name="$Test_vw5" type="stability_check/nWp"/>
+   <set name="$Test_vwpq4" type="stability_check/nWpq"/>
+   <set name="$Test_X" type="stability_check/MemoryLocation"/>
+   <set name="$Test_Y" type="stability_check/MemoryLocation"/>
+   <set name="$Test_Z" type="stability_check/MemoryLocation"/>
+   <set name="Consistent" type="stability_check/Boolean"/>
+   <set name="stability_check/RDMAaction" type="stability_check/Action"/>
+   <set name="stability_check/Reader" type="stability_check/Action"/>
+   <set name="stability_check/Writer" type="stability_check/Action"/>
+</node>
+
+<edge visible="no">
+   <relation name="corf"> <type name="stability_check/Action"/> <type name="stability_check/Action"/> </relation>
+   <relation name="hb"> <type name="stability_check/Action"/> <type name="stability_check/Action"/> </relation>
+   <relation name="hbqp"> <type name="stability_check/Action"/> <type name="stability_check/Action"/> </relation>
+   <relation name="hbs"> <type name="stability_check/Action"/> <type name="stability_check/Action"/> </relation>
+   <relation name="sw"> <type name="stability_check/Action"/> <type name="stability_check/Action"/> </relation>
+</edge>
+
+<edge visible="no" attribute="yes">
+   <relation name="d"> <type name="stability_check/Action"/> <type name="stability_check/Thr"/> </relation>
+   <relation name="host"> <type name="stability_check/MemoryLocation"/> <type name="stability_check/Node"/> </relation>
+   <relation name="host"> <type name="stability_check/Thr"/> <type name="stability_check/Node"/> </relation>
+   <relation name="o"> <type name="stability_check/Action"/> <type name="stability_check/Thr"/> </relation>
+   <relation name="rl"> <type name="stability_check/Action"/> <type name="stability_check/MemoryLocation"/> </relation>
+   <relation name="rV"> <type name="stability_check/Action"/> <type name="Int"/> </relation>
+   <relation name="wl"> <type name="stability_check/Action"/> <type name="stability_check/MemoryLocation"/> </relation>
+   <relation name="wV"> <type name="stability_check/Action"/> <type name="Int"/> </relation>
+</edge>
+
+</view>
+
+</alloy>
