@@ -335,7 +335,7 @@ fact {all disj a,b: LocalCPUaction|
 //run{some disj i1,i2:Instruction | #(actions[i1]&actions[i2])>0} for 8
 
 pred p { 
-           #Put = 1 and
+           #Cas = 1 and
             #Thr = 2}
 
 pred getThenPutF {  // needs at least 12

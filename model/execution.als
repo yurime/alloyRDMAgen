@@ -20,13 +20,10 @@ abstract sig Execution {
  Consistent: Boolean
 }{
 //mo basic definition
-
    {mo=^mo}
    {not cyclic[mo]}
-
 //mo_s definition
-   mos in mo
-  {all w1,w2:Writer| w2 in w1.mos iff w1 in nRWpq+U}
+   mos= (nRWpq+U) <: mo
 
   {
    (cyclic_MoThenHbs or readAndMissPrevWriteInHbs
@@ -54,7 +51,7 @@ pred readAndMissPrevWriteInHbs [e:Execution] {
 
 pred tsoBufferCoherence1of3 [e:Execution]{some a,b,c:Action | 
     c in a.rf and // consistency 3
-    c in b.((e.mo) & (Action->(Action-nWpq))).sw.(e.hbs) and 
+    c in b.(e.mo).sw_s.(e.hbs) and 
     wl[a]=wl[b] 
     and b in a.(e.mo)
 }
@@ -73,8 +70,12 @@ pred tsoFenceViolation [e:Execution]{some a,b,c:Action |
     wl[a]=wl[b] 
     and b in a.(e.mo)
 }
-
+//one sig TestExecution extends Execution{}
+pred p { 
+           #Cas = 1 and
+            #Thr = 2}
 /*using sw_rules.als predicates: getThenPutF, putAfterPut, putAndCas */
-run {Execution.Consistent=True and getThenPutF} for 12
-run {Execution.Consistent=True and putAfterPut} for 10
-run {Execution.Consistent=True and putAndCas} for 8
+run getThenPutF for 13
+run putAfterPut for 12
+run putAndCas for 11
+run p for 11

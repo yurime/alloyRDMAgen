@@ -10,18 +10,19 @@ and
 
 fact{all a:nA |
 	a.sw = a.nic_ord_sw+a.poll_cq_sw+a.instr_sw
-//and 	a.sw_s = a.nic_ord_sw_s+a.poll_cq_sw_s+a.instr_sw
-}
-/*
-fact{
-	poll_cq_sw_s= ((^(instr_sw-(nWpq->Action))).poll_cq_sw) + (instr_sw.poll_cq_sw) 
+and 	a.sw_s = a.nic_ord_sw_s+a.poll_cq_sw_s+a.instr_sw
 }
 
 fact{all a:nA |
-	(a in nWpq) => a.nic_ord_sw_s= a.nic_ord_sw
-    else a.nic_ord_sw_s=none
+	(a in nWp) => a.poll_cq_sw_s= a.(~poll_cq_sw).instr_sw
+	else a.poll_cq_sw_s=a.poll_cq_sw 
 }
-*/
+
+fact{all a:nA |
+	(a in nWp) => a.nic_ord_sw_s= a.~nic_ord_sw_s.instr_sw
+    else a.nic_ord_sw_s= a.nic_ord_sw
+}
+
 //-----------
 /**instr-sw**/
 //-----------
@@ -203,7 +204,7 @@ run p1 for 8
 */
 
 pred p2 { 
-           #PutF = 1 and
+           #Cas = 1 and
             #Thr = 2}
 
 check{not cyclic[sw]} for 10 expect 0

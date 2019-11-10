@@ -1,4 +1,5 @@
 open execution as e
+open sw_rules as sw
 
 one sig RDMAExecution extends Execution{
 
@@ -24,16 +25,24 @@ one sig RDMAExecution extends Execution{
   }// end hbqp defintion
 
 //hbs definition 
-  hbs=^(po_tc+rf +sw_s+mos)
+  hbs=^(po_tc+rf +sw+mos)
 
 }// end of sig execution
 
 pred p { 
             //#(Action.o) > 1 and
-            //#Rcas = 0 and
-            
-            RDMAExecution.Consistent=True and
-            putAfterPut}
+            #Cas= 1}
+
+pred getThenPutF_rdma{RDMAExecution.Consistent=True and getThenPutF}
+pred putAfterPut_rdma{RDMAExecution.Consistent=True and getThenPutF}
+pred putAndCas_rdma{RDMAExecution.Consistent=True and putAndCas}
+
 
 //check{RDMAExecution.Robust => not cyclic[(Execution.hb).^(Execution.mo)]} for 10 expect 1 //should fail so expect 1
-run p for 10
+run getThenPutF_rdma for 13
+run putAfterPut_rdma for 13
+run putAndCas_rdma for 12
+run getThenPutF for 13
+run putAfterPut for 12
+run putAndCas for 10
+run p for 11
