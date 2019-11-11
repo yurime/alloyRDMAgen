@@ -190,7 +190,7 @@ fact{all a:RDMAaction|
 fact {all a:RDMAaction| all i: Instruction | instr[a] = i iff a in i.actions}
 
 abstract sig NFInstruction extends Instruction{}{
-#actions = 4
+  #actions = 4
 }
 abstract sig FInstruction extends Instruction{
     nf:one nF

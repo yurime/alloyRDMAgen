@@ -50,5 +50,5 @@ run consist_nwpq_lw for 10
 run consist_nwpq_nwp for 14 //works for 14 not for 12
 run consist_nwp_nwpq for 14 //works for 14 not for 12
 -------------------------------------------------------------------------------
-run consist_nwpq_nwpq for 12//order-sw prevents it
-run consist_nwp_nwp for 12//order-sw prevents it
+run consist_nwpq_nwpq for 4 expect 0//order-sw prevents it
+run consist_nwp_nwp for 4 expect 0//order-sw prevents it

@@ -36,15 +36,18 @@ fact {all disj a,b: LocalCPUaction|
 }
 
 
-sig Reader in Action {
-	rl: one MemoryLocation,
+sig Reader in MemoryAction {
 	rV: one Int,
 	corf: one Writer
 }
 
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
 
-sig Writer in Action {
-	wl: one MemoryLocation,
+sig Writer in MemoryAction {
 	wV: one Int,
 	rf: set Reader
 }
@@ -53,11 +56,7 @@ sig Writer in Action {
 fact{~rf=corf}
 
 //rf implies shared location and value
-fact{all w:Writer, r:rf[w] | rl[r]=wl[w] and rV[r]=wV[w]}
-
-// read/write from the same machine as the action destination
-fact{all r:Reader | host[rl[r]]=host[d[r]] }
-fact{all w:Writer | host[wl[w]]=host[d[w]] }
+fact{all w:Writer, r:rf[w] | loc[r]=loc[w] and rV[r]=wV[w]}
 
 sig RDMAaction in Action {
     sw : set Action
@@ -164,13 +163,13 @@ sig Init extends W{}
 
 //---- Init rules
 // All memory locations must be initialized
-fact{Init.wl=MemoryLocation}
+fact{Init.loc=MemoryLocation}
 
 // Init or a sequence of it is the first instruction
 fact{Init.~po_tc in Init}
 
 // one Init per one location
-fact  {all disj i1,i2:Init| not wl[i1]=wl[i2]}
+fact  {all disj i1,i2:Init| not loc[i1]=loc[i2]}
 
 // assign some initial value
 fact { all w:Writer | w.wV = 4 }

@@ -36,15 +36,18 @@ fact {all disj a,b: LocalCPUaction|
 }
 
 
-sig Reader in Action {
-	rl: one MemoryLocation,
+sig Reader in MemoryAction {
 	rV: one Int,
 	corf: one Writer
 }
 
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
 
-sig Writer in Action {
-	wl: one MemoryLocation,
+sig Writer in MemoryAction {
 	wV: one Int,
 	rf: set Reader
 }
@@ -53,11 +56,8 @@ sig Writer in Action {
 fact{~rf=corf}
 
 //rf implies shared location and value
-fact{all w:Writer, r:rf[w] | rl[r]=wl[w] and rV[r]=wV[w]}
+fact{all w:Writer, r:rf[w] | loc[r]=loc[w] and rV[r]=wV[w]}
 
-// read/write from the same machine as the action destination
-fact{all r:Reader | host[rl[r]]=host[d[r]] }
-fact{all w:Writer | host[wl[w]]=host[d[w]] }
 
 sig RDMAaction in Action {
     sw : set Action
@@ -111,15 +111,13 @@ fact { all a: nWp| localMachineAction[a]}
 /* Remote Get statement */
 /* =============== */
 
-sig Get extends Instruction {}{
-  #actions = 3 and 
-  #(actions & Sx_get) = 1 and 
-  #(actions & nRpq) = 1 and 
-  #(actions & nWp) = 1   and 
-  (let nrpq=actions & nRpq,
-      nwp=actions & nWp{
-       rV[nrpq] = wV[nwp]
-   })
+
+sig Get extends NFInstruction {
+	nrpq: one nRpq,
+	nwp: one nWp
+}{
+  (nrpq in actions) and 
+  (nwp in actions) 
 }
 
 /* construction of sw */
@@ -136,19 +134,36 @@ fact{all a:nA |
 
 //small optimization
 fact{all a:nA | a.nic_ord_sw=none }
+
+sig nEx extends nA {
+    poll_cq_sw: lone poll_cq
+}
+fact {all a:nEx| not(a in Writer) and not (a in Reader)
+                       and remoteMachineAction[a]}
+                       
 //-----------
 /**instr-sw**/
 //-----------
-fact{all get:Get | // sx->nrpq->nwp
-  let sx=actions[get] & Sx_get, 
-      nrpq=actions[get] & nRpq,
-      nwp=actions[get] & nWp{
-          instr_sw[sx] = nrpq and
-          instr_sw[nrpq] = nwp and
-		   #(instr_sw[nwp])=0
-      }
+abstract sig Instruction {
+	actions: set RDMAaction,
+    sx:one Sx,
+    ex:one nEx
+}{
+  (one o[actions])
+  and (ex in actions) 
+  and (sx in actions) 
 }
 
+abstract sig NFInstruction extends Instruction{}{
+  #actions = 4
+}
+sig Get extends NFInstruction {
+	nrpq: one nRpq,
+	nwp: one nWp
+}{
+  (nrpq in actions) and 
+  (nwp in actions) 
+}
 sig W extends LocalCPUaction{}
 fact {all w:W| w in Writer and not(w in Reader)}
 fact {all a:W| not(a in RDMAaction)}
@@ -157,13 +172,13 @@ sig Init extends W{}
 
 //---- Init rules
 // All memory locations must be initialized
-fact{Init.wl=MemoryLocation}
+fact{Init.loc=MemoryLocation}
 
 // Init or a sequence of it is the first instruction
 fact{Init.~po_tc in Init}
 
 // one Init per one location
-fact  {all disj i1,i2:Init| not wl[i1]=wl[i2]}
+fact  {all disj i1,i2:Init| not loc[i1]=loc[i2]}
 
 
 // assign some initial value

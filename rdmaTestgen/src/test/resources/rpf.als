@@ -36,9 +36,13 @@ fact {all disj a,b: LocalCPUaction|
                                         (a in b.copo) 
                                       )
 }
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
 
-sig Writer in Action {
-  wl: one MemoryLocation,
+sig Writer in MemoryAction {
   wV: one Int,
   rf: set Reader
 }
@@ -103,8 +107,7 @@ fact {all f:nF| not(f in Writer) and not (f in Reader)}
 fact {all a: nF| localMachineAction[a]}
 
 
-sig Reader in Action {
-  rl: one MemoryLocation,
+sig Reader in MemoryAction {
   rV: one Int,
   corf: one Writer
 }
@@ -148,13 +151,13 @@ fact {all a:W| not(a in RDMAaction)}
 sig Init extends W{}
 
 // All memory locations must be initialized
-fact{Init.wl=MemoryLocation}
+fact{Init.loc=MemoryLocation}
 
 // Init or a sequence of it is the first instruction
 fact{Init.~po_tc in Init}
 
 // one Init per one location
-fact  {all disj i1,i2:Init| not wl[i1]=wl[i2]}
+fact  {all disj i1,i2:Init| not loc[i1]=loc[i2]}
 
 
 fact{all a:Sx |
@@ -172,9 +175,9 @@ fact { all w:Writer | w.wV = 4 }
 /*
 
 // there is at least one write to each memory location
-fact { all ml:MemoryLocation | some w:Writer | w.wl = ml }
+fact { all ml:MemoryLocation | some w:Writer | w.loc = ml }
 // ... and one initial value
-fact { all ml:MemoryLocation | some iv:InitialValue | iv.wl = ml }
+fact { all ml:MemoryLocation | some iv:InitialValue | iv.loc = ml }
 
 // a writer succeeds initial value
 fact { all iv : InitialValue | one w:Writer | w in po[iv] }

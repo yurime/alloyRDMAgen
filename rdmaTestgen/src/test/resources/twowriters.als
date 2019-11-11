@@ -5,8 +5,14 @@ sig Thr { host: one Node }
 sig MemoryLocation { host: one Node }
 
 sig Action { o, d: one Thr }
-sig Writer extends Action {
-    wl: one MemoryLocation,
+
+sig MemoryAction extends Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
+
+sig Writer extends MemoryAction {
     wV: one Int
 }
 sig InitialValue {}

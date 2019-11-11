@@ -21,14 +21,18 @@ abstract sig Action {
 	d, o : one Thr
 }
 
-sig Writer in Action {
-	wl: one MemoryLocation,
+sig MemoryAction extends Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
+
+sig Writer extends MemoryAction {
 	wV: one Int,
 	rf: set Reader
 }
 
-sig Reader in Action {
-	rl: one MemoryLocation,
+sig Reader extends MemoryAction {
 	rV: one Int,
 	corf: one Writer
 }

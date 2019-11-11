@@ -36,16 +36,20 @@ fact {all disj a,b: LocalCPUaction|
 
 
 
-sig Writer in Action {
-  wl: one MemoryLocation,
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
+
+sig Writer in MemoryAction {
   wV: one Int,
   rf: set Reader
 }
 
 fact{~rf=corf}
 
-sig Reader in Action {
-  rl: one MemoryLocation,
+sig Reader in MemoryAction {
   rV: one Int,
   corf: one Writer
 }
@@ -53,7 +57,7 @@ sig Reader in Action {
 //--- Reader/Writer rules
 
 //rf implies shared location and value
-fact{all w:Writer, r:rf[w] | rl[r]=wl[w] and rV[r]=wV[w]}
+fact{all w:Writer, r:rf[w] | loc[r]=loc[w] and rV[r]=wV[w]}
 
 /*CPU write*/
 sig W extends LocalCPUaction{}
@@ -67,11 +71,18 @@ sig RDMAaction in Action {
 
 /* RDMA instructions and the actions that compose them*/
 abstract sig Instruction {
-  actions: set Action
+	actions: set RDMAaction,
+    sx:one Sx,
+    ex:one nEx
 }{
-  all disj a1,a2:actions | o[a1]=o[a2]
+  (one o[actions])
+  and (ex in actions) 
+  and (sx in actions) 
 }
 
+abstract sig NFInstruction extends Instruction{}{
+  #actions = 4
+}
 fact {all a: Sx| all i: Instruction | instr[a] = i iff a in i.actions}
 fact {all a: nA| all i: Instruction | instr[a] = i iff a in i.actions}
 
@@ -127,30 +138,23 @@ fact { all a: nWpq| remoteMachineAction[a]}
 /* =============== */
 
 
-sig Put extends Instruction {}{ 
-  #actions = 3 and 
-  #(actions & Sx_put) = 1 and 
-  #(actions & nRp) = 1 and 
-  #(actions & nWpq) = 1    and 
-  (let sx= actions&Sx,
-   nrp=actions & nRp,
-      nwpq=actions & nWpq{
-       rV[nrp] = wV[nwpq] and
-		sameOandD[sx,nwpq]
-   })
+sig Put extends NFInstruction {
+	nrp: one nRp,
+	nwpq: one nWpq
+}{  
+  (nrp in actions) and 
+  (nwpq in actions)
 }
+
 //-----------
 /**instr-sw**/
 //-----------
 fact{all put:Put | // sx->nrp->nwpq
-  let sx=actions[put] & Sx_put, 
-      nrp=actions[put] & nRp,
-      nwpq=actions[put] & nWpq{
-          instr_sw[sx] = nrp and
-          instr_sw[nrp] = nwpq and
-		   #(instr_sw[nwpq])=0
-     }
+          instr_sw[put.sx] = put.nrp and
+          instr_sw[put.nrp] = put.nwpq and
+		  instr_sw[put.nwpq]=put.ex  
 }
+
 
 
 //------------
@@ -189,13 +193,13 @@ sig Init extends W{}
 
 //---- Init rules
 // All memory locations must be initialized
-fact{Init.wl=MemoryLocation}
+fact{Init.loc=MemoryLocation}
 
 // Init or a sequence of it is the first instruction
 fact{Init.~po_tc in Init}
 
 // one Init per one location
-fact  {all disj i1,i2:Init| not wl[i1]=wl[i2]}
+fact  {all disj i1,i2:Init| not loc[i1]=loc[i2]}
 
 // assign some initial value
 fact { all w:Writer | w.wV = 4 }

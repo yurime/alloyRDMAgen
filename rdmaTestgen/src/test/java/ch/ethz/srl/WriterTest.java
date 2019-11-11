@@ -24,7 +24,7 @@ public class WriterTest {
 	//TGThread t1 = res.labelToThreads.get("Thr$1");
 
 	TGWriter w0 = res.labelToWriters.get("Writer$0");
-	assert(w0.getWl() == ml0 || w0.getWl() == ml1);
+	assert(w0.getLoc() == ml0 || w0.getLoc() == ml1);
 	assertEquals(w0.getWv(), 4);
     }
 

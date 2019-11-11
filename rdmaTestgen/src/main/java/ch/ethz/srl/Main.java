@@ -35,6 +35,8 @@ public class Main {
         int limit = -1;
         boolean countMode = false;
         String outputDirName = null;
+        String nA1type = null;
+        String nA2type = null;
         File outputDir = null;
         int scope = DEFAULT_SCOPE;
         int solutionCount = 0;
@@ -61,6 +63,14 @@ public class Main {
             }
             if (arg.equals("--scope") || arg.equals("-s")) {
                 scope = Integer.parseInt(args[++i]);
+                continue;
+            }
+            if (arg.equals("-w1")) {
+            	nA1type = args[++i];
+                continue;
+            }
+            if (arg.equals("-w2")) {
+            	nA2type = args[++i];
                 continue;
             }
             if (arg.equals("-d")) {
@@ -108,16 +118,54 @@ public class Main {
 
             ExprCall oneThread = (ExprCall)(((ExprUnary)(world.parseOneExpressionFromString("oneThread"))).sub);
             ExprCall twoThreads = (ExprCall)(((ExprUnary)(world.parseOneExpressionFromString("twoThreads"))).sub);
-            Expr query = null;
+            ExprCall threeThreads = (ExprCall)(((ExprUnary)(world.parseOneExpressionFromString("threeThreads"))).sub);
+            ExprCall nA1_lw  = (ExprCall)(((ExprUnary)(world.parseOneExpressionFromString("nA1_lw"))).sub);
+            ExprCall nA2_lw  = (ExprCall)(((ExprUnary)(world.parseOneExpressionFromString("nA2_lw"))).sub);
+            ExprCall nA1_U  = (ExprCall)(((ExprUnary)(world.parseOneExpressionFromString("nA1_u"))).sub);
+            ExprCall nA2_U  = (ExprCall)(((ExprUnary)(world.parseOneExpressionFromString("nA2_u"))).sub);
+            ExprCall nA1_nwp  = (ExprCall)(((ExprUnary)(world.parseOneExpressionFromString("nA1_nwp"))).sub);
+            ExprCall nA2_nwp  = (ExprCall)(((ExprUnary)(world.parseOneExpressionFromString("nA2_nwp"))).sub);
+            ExprCall nA1_nwpq  = (ExprCall)(((ExprUnary)(world.parseOneExpressionFromString("nA1_nrwpq"))).sub);
+            ExprCall nA2_nwpq  = (ExprCall)(((ExprUnary)(world.parseOneExpressionFromString("nA2_nrwpq"))).sub);
+
+            Expr q1 = null;
             if (procs == 1)
-                query = oneThread.fun.getBody().and(q0);
+                q1 = oneThread.fun.getBody().and(q0);
             else if (procs == 2)
-                query = twoThreads.fun.getBody().and(q0);
+                q1 = twoThreads.fun.getBody().and(q0);
+            else if (procs == 3)
+                q1 = threeThreads.fun.getBody().and(q0);
             else {
-                System.err.printf("procs must be either 1 or 2");
+                System.err.printf("procs must be either 1 or 2 or 3");
+                System.exit(1);
+            }
+            Expr q2 = null;
+            if (nA1type.equals("lw"))
+            	q2 = nA1_lw.fun.getBody().and(q1);
+            else if (nA1type.equals("u"))
+            	q2 = nA1_U.fun.getBody().and(q1);
+            else if (nA1type.equals("nwp"))
+            	q2 = nA1_nwp.fun.getBody().and(q1);
+            else if (nA1type.equals("nrwpq"))
+            	q2 = nA1_nwpq.fun.getBody().and(q1);
+            else {
+                System.err.printf("-w1 must be either lw or u or nwp or nrwpq not: %s ",nA1_nwpq );
                 System.exit(1);
             }
 
+            Expr query = null;
+            if (nA2type.equals("lw"))
+            	query = nA2_lw.fun.getBody().and(q2);
+            else if (nA2type.equals("u"))
+            	query = nA2_U.fun.getBody().and(q2);
+            else if (nA2type.equals("nwp"))
+            	query = nA2_nwp.fun.getBody().and(q2);
+            else if (nA2type.equals("nrwpq"))
+            	query = nA2_nwpq.fun.getBody().and(q2);
+            else {
+                System.err.printf("-w2 must be either lw or u or nwp or nrwpq not: %s",nA2_nwpq );
+                System.exit(1);
+            }
             Command command = new Command(false, scope, -1, -1, query);
             for (A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, options); ans.satisfiable(); ans = ans.next()) {
                 solutionCount++;
@@ -135,15 +183,15 @@ public class Main {
                 }
 
                 if (solutionCount > firstSolution) {
-                    A4CodeGen a4cg = new A4CodeGen(ans, "this/");// generation from juint tests
-                	//A4CodeGen a4cg = new A4CodeGen(ans, "t/b/e/sw/a/");
+                    //A4CodeGen a4cg = new A4CodeGen(ans, "this/");// generation from juint tests
+                	A4CodeGen a4cg = new A4CodeGen(ans, "d/e/sw/a/");
                     PrintWriter pw = null;
                     try {
                         if (outputDir == null)
                             pw = new PrintWriter(System.out);
                         else {
                             File of = new File(outputDir,
-                                               String.format("%s%06d.ir", modelStem, solutionCount));
+                                               String.format("%s%06d%s%s.ir", modelStem, solutionCount, nA1type, nA2type));
                             pw = new PrintWriter(of);
                         }
                         a4cg.emitCode(pw, solutionCount);

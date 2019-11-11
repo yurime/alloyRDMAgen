@@ -55,15 +55,54 @@ and (e_f.mo=^(e_f.mo_next))
 // sanity
 //check {RDMAExecution.Consistent=False} expect 0
 //Note that {RDMAExecution_prime.Consistent=true} comes from base_sw_rules
+pred nA1_lw {
+            (nA1Pivot in W) 
+        }
+pred nA2_lw {
+            (nA2Pivot in W) 
+        }
+pred nA1_nwp {
+            (nA1Pivot in nWp) 
+        }
+pred nA2_nwp {
+            (nA2Pivot in nWp) 
+        }
+pred nA1_nwpq {
+            (nA1Pivot in nWpq) 
+        }
+pred nA2_nwpq {
+            (nA2Pivot in nWpq) 
+        }
+pred nA1_u {
+            (nA1Pivot in U) 
+        }
+pred nA2_u {
+            (nA2Pivot in U) 
+        }
+pred nA1_nrwpq {
+            (nA1Pivot in nRWpq) 
+        }
+pred nA2_nrwpq {
+            (nA2Pivot in nRWpq) 
+        }
+pred show { 
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+            #Thr = 2
+        }
 
 
-run consist_lw_lw for 4
-run consist_lw_nwp for 8
-run consist_nwp_lw for 10
-run consist_nwpq_lw for 10
-run consist_nwpq_nwp for 14 //works for 14 not for 12
-run consist_nwp_nwpq for 14 //works for 14 not for 12
+run show for 10
+/*
+run consist_lw_lw for 4//34ms.
+run consist_lw_nwp for 8//2816ms.
+run consist_nwp_lw for 10//10241ms
+run consist_nwpq_lw for 10 //6903ms.
+run consist_nwpq_nwp for 14 //works for 14 not for 12 (226302ms.)
 -------------------------------------------------------------------------------
-run consist_nwpq_nwpq for 12//order-sw prevents it
+run consist_nwpq_nwpq for 10//order-sw prevents it
 run consist_nwp_nwp for 12//order-sw prevents it
 run consist_lw_nwpq for 10 // loops for 10 may try 3 threads
+run consist_nwp_nwpq for 14 //runs very long
+*/

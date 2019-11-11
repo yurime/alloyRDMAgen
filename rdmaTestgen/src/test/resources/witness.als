@@ -29,42 +29,49 @@ abstract sig Action {
 
 pred cyclic [rel:Action->Action] {some a:Action | a in ^rel[a]}
 pred sameOandD [a,b:Action] {o[a]=o[b] and  d[a]=d[b] }
+pred remoteMachineAction [a:Action] { not host[o[a]]=host[d[a]] }
 
-sig Reader in Action {
-	rl: one MemoryLocation,
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
+
+sig Reader in MemoryAction {
 	rV: one Int,
 	corf: one Writer
 }
 
+sig nEx extends nA {
+    //poll_cq_sw: lone poll_cq
+}
 
-sig Writer in Action {
-	wl: one MemoryLocation,
+sig Writer in MemoryAction {
 	wV: one Int,
 	rf: set Reader
 }
 
 sig RDMAaction in Action {
-    sw : set Action
+	instr : one Instruction,
+	instr_sw: lone nA,
+    sw : set Action,
+    sw_s : set Action
 }
 
 //rf implies shared location and value
-fact{all w:Writer, r:rf[w] | rl[r]=wl[w] and rV[r]=wV[w]}
-
-// read/write from the same machine as the action destination
-fact{all r:Reader | host[rl[r]]=host[d[r]] }
-fact{all w:Writer | host[wl[w]]=host[d[w]] }
+fact{all w:Writer, r:rf[w] | loc[r]=loc[w] and rV[r]=wV[w]}
 
 sig Init extends W{}
 
 //---- Init rules
 // All memory locations must be initialized
-fact{Init.wl=MemoryLocation}
+fact{Init.loc=MemoryLocation}
 
 // Init or a sequence of it is the first instruction
 fact{Init.~po_tc in Init}
 
 // one Init per one location
-fact  {all disj i1,i2:Init| not wl[i1]=wl[i2]}
+fact  {all disj i1,i2:Init| not loc[i1]=loc[i2]}
 
 
 abstract sig LocalCPUaction extends Action{
@@ -101,21 +108,14 @@ fact {all w:W| w in Writer and not(w in Reader)}
 fact {all a:W| not(a in RDMAaction)}
 
 /* start NIC action (start external)*/
-abstract sig Sx extends LocalCPUaction{
-	instr: one Instruction,
-	instr_sw: one nA
-}
+abstract sig Sx extends LocalCPUaction{}
 
 fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
 fact {all sx: Sx| (sx in RDMAaction)}
 
-sig Sx_put extends Sx {}
-
 
 /*NIC action*/
 abstract sig nA extends Action{
-	instr: one Instruction,
-    instr_sw: lone nA, 
     nic_ord_sw: set nA//,
     //poll_cq_sw: lone poll_cq 
 }
@@ -144,29 +144,35 @@ fact {all a: nRp| o[a] = d[a]}
 
 /* RDMA instructions and the actions that compose them*/
 abstract sig Instruction {
-	actions: set Sx+nA
+	actions: set RDMAaction,
+    sx:one Sx,
+    ex:one nEx
 }{
-  all disj a1,a2:actions | o[a1]=o[a2]
+  (one o[actions])
+  and (ex in actions) 
+  and (sx in actions) 
 }
 
-fact {all i: Instruction |all a:i.actions&Sx | instr[a] = i}
-fact {all i: Instruction |all a:i.actions&nA | instr[a] = i}
+abstract sig NFInstruction extends Instruction{}{
+  #actions = 4
+}
 
+fact {all a:RDMAaction| all i: Instruction | instr[a] = i iff a in i.actions}
 /* =============== */
 /* Remote Put statement */
 /* =============== */
 
-sig Put extends Instruction {}{ 
-  #actions = 3 and 
-  #(actions & Sx_put) = 1 and 
-  #(actions & nRp) = 1 and 
-  #(actions & nWpq) = 1    and 
-  (let nrp=actions & nRp,
-      nwpq=actions & nWpq{
-       rV[nrp] = wV[nwpq]
-   })
+fact{all a:RDMAaction|
+    remoteMachineAction[a] => (sameOandD[a,a.instr.sx]
+                                             and sameOandD[a,a.instr.ex])
 }
-
+sig Put extends NFInstruction {
+	nrp: one nRp,
+	nwpq: one nWpq
+}{  
+  (nrp in actions) and 
+  (nwpq in actions)
+}
 
 
 /* construction of sw */
@@ -185,15 +191,10 @@ fact{all a:nA |
 //-----------
 
 fact{all put:Put | // sx->nrp->nwpq
-  let sx=actions[put] & Sx_put, 
-      nrp=actions[put] & nRp,
-      nwpq=actions[put] & nWpq{
-          instr_sw[sx] = nrp and
-          instr_sw[nrp] = nwpq and
-		   #(instr_sw[nwpq])=0
-     }
+          instr_sw[put.sx] = put.nrp and
+          instr_sw[put.nrp] = put.nwpq and
+		  instr_sw[put.nwpq]=put.ex  
 }
-
 
 
 /* Witness */

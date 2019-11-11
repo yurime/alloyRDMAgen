@@ -6,8 +6,14 @@ sig MemoryLocation { host: one Node }
 one sig Top {}
 
 sig Action { o, d: one Thr }
-sig Writer in Action {
-    wl: one MemoryLocation,
+
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
+
+sig Writer in MemoryAction {
     wV: one Int
 }
 
@@ -25,7 +31,7 @@ fact { all a: nWpq| not host[o[a]] = host[d[a]]}
 
 
 fact { #(Action.o) = 2 and #(Action.d) = 2 }
-fact { #MemoryLocation = 2 and #Thr = 2 and #nWpq = 1 and #(nWpq.wl) = 1 }
+fact { #MemoryLocation = 2 and #Thr = 2 and #nWpq = 1 and #(nWpq.loc) = 1 }
 
 pred show {}
 

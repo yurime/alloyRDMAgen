@@ -34,9 +34,18 @@ fact {all disj a,b: LocalCPUaction|
                                         (a in b.copo) 
                                       )
 }
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
 
-sig Writer in Action {
-	wl: one MemoryLocation,
+sig Writer in MemoryAction {
 	wV: one Int,
 	rf: set Reader
 }
@@ -95,26 +104,45 @@ sig nWpq extends nW{}
 fact { all a: nWpq| not host[o[a]] = host[d[a]]}
 
 
-sig Reader in Action {
-	rl: one MemoryLocation,
+in MemoryAction {
 	rV: one Int,
 	corf: one Writer
 }
+sig nEx extends nA {
+    poll_cq_sw: lone poll_cq
+}
+fact {all a:nEx| not(a in Writer) and not (a in Reader)
+                       and remoteMachineAction[a]}
+                       
+//-----------
+/**instr-sw**/
+//-----------
+abstract sig Instruction {
+	actions: set RDMAaction,
+    sx:one Sx,
+    ex:one nEx
+}{
+  (one o[actions])
+  and (ex in actions) 
+  and (sx in actions) 
+}
+
+abstract sig NFInstruction extends Instruction{}{
+  #actions = 4
+}
+
 
 /* =============== */
 /* Remote Put statement */
 /* =============== */
 
 
-sig Put extends Instruction {}{ 
-  #actions = 3 and 
-  #(actions & Sx_put) = 1 and 
-  #(actions & nRp) = 1 and 
-  #(actions & nWpq) = 1    and 
-  (let nrp=actions & nRp,
-      nwpq=actions & nWpq{
-       rV[nrp] = wV[nwpq]
-   })
+sig Put extends NFInstruction {
+	nrp: one nRp,
+	nwpq: one nWpq
+}{  
+  (nrp in actions) and 
+  (nwpq in actions)
 }
 
 //-----------
@@ -138,13 +166,13 @@ fact {all a:W| not(a in RDMAaction)}
 sig Init extends W{}
 
 // All memory locations must be initialized
-fact{Init.wl=MemoryLocation}
+fact{Init.loc=MemoryLocation}
 
 // Init or a sequence of it is the first instruction
 fact{Init.~po_tc in Init}
 
 // one Init per one location
-fact  {all disj i1,i2:Init| not wl[i1]=wl[i2]}
+fact  {all disj i1,i2:Init| not loc[i1]=loc[i2]}
 
 
 fact{all a:Sx |
@@ -162,9 +190,9 @@ fact { all w:Writer | w.wV = 4 }
 /*
 
 // there is at least one write to each memory location
-fact { all ml:MemoryLocation | some w:Writer | w.wl = ml }
+fact { all ml:MemoryLocation | some w:Writer | w.loc = ml }
 // ... and one initial value
-fact { all ml:MemoryLocation | some iv:InitialValue | iv.wl = ml }
+fact { all ml:MemoryLocation | some iv:InitialValue | iv.loc = ml }
 
 // a writer succeeds initial value
 fact { all iv : InitialValue | one w:Writer | w in po[iv] }

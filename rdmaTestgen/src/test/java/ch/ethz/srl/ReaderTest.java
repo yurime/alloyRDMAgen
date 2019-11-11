@@ -24,7 +24,7 @@ public class ReaderTest {
 	//TGThread t1 = res.labelToThreads.get("Thr$1");
 
 	TGReader r0 = res.labelToReaders.get("R$0");
-	assert(r0.getRl() == ml0 || r0.getRl() == ml1);
+	assert(r0.getLoc() == ml0 || r0.getLoc() == ml1);
 	assertEquals(r0.getRv(), 4);
     }
 }

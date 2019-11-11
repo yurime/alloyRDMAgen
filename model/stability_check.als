@@ -31,20 +31,22 @@ abstract sig Action {
 	d, o : one Thr
 }
 
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}
+
 pred cyclic [rel:Action->Action] {some a:Action | a in ^rel[a]}
 pred sameOandD [a,b:Action] {o[a]=o[b] and  d[a]=d[b] }
 pred remoteMachineAction [a:Action] { not host[o[a]]=host[d[a]] }
 //pred localMachineAction [a:Action] { host[o[a]]=host[d[a]] }
 
-sig Reader in Action {
-	rl: one MemoryLocation,
+sig Reader in MemoryAction {
 	rV: one Int,
 	corf: one Writer
 }
 
 
-sig Writer in Action {
-	wl: one MemoryLocation,
+sig Writer in MemoryAction{
 	wV: one Int,
 	rf: set Reader
 }
@@ -130,7 +132,7 @@ fact {all a:poll_cq| not (a in RDMAaction)}
 
 fact{all w:Writer, r:Reader | corf[r]=w iff r in rf[w]}
 //rf implies shared location and value
-fact{all w:Writer, r:Reader | corf[r]=w iff (rl[r]=wl[w] and rV[r]=wV[w])}
+fact{all w:Writer, r:Reader | corf[r]=w iff (loc[r]=loc[w] and rV[r]=wV[w])}
 
 
 
@@ -175,7 +177,7 @@ pred cyclic_MoThenHbs[e:Execution] {
 }
 
 pred readAndMissPrevWriteInHbs [e:Execution] {
-    some a,b,c:Action | a in c.corf and c in b.(e.hbs) and wl[a]=wl[b] and b in a.(e.mo)
+    some a,b,c:Action | a in c.corf and c in b.(e.hbs) and loc[a]=loc[b] and b in a.(e.mo)
 }
 
 pred tsoBufferCoherence1of3 [e:Execution]{some a,b,c:Action | 

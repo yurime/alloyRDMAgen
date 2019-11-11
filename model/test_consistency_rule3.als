@@ -14,7 +14,7 @@ open driver as d
 //fact{nA2Pivot in nWpq}
 
 /* Hypothesis of the nic-ord-sw put or RDMAatomic rule on the pivots */
-fact {let e_t=RDMAExecution | nA1Pivot in nA2Pivot.(e_t.mo_next)
+fact {let e_t=RDMAExecution | nA2Pivot in nA1Pivot.(e_t.mo_next)
                                             and Witness in nA2Pivot.(iden+po_tc).sw.(e_t.hbs)
 											and Witness in nA1Pivot.rf}
 /* rule from driver*/
@@ -52,14 +52,13 @@ and (e_f.mo=^(e_f.mo_next))
 //Note that {RDMAExecution_prime.Consistent=true} comes from base_sw_rules
 
 
-run consist_lw_lw for 10
-/*run consist_lw_nwp for 8
-run consist_lw_nwpq for 8
-run consist_nwp_lw for 10
-run consist_nwpq_lw for 10
-run consist_nwpq_nwp for 14 //works for 14 not for 12
-run consist_nwp_nwpq for 14 //works for 14 not for 12
+run consist_lw_lw for 10 //works for 10 not for (1899ms)
+run consist_lw_nwp for 10 //works for 10 not for 8 (25561ms)
+run consist_nwp_lw for 10 //works for 10 not for 8 (4712ms)
+run consist_lw_nwpq for 12//works for 12 not for 10 (48159ms)
+run consist_nwpq_nwp for 14 //works for 14 not for 12 (30000ms)
+run consist_nwpq_lw for 14 //works for 14 not for 12 (163229ms.)
+run consist_nwp_nwpq for 16 //works for ?? not for 14(very long time)
 -------------------------------------------------------------------------------
-run consist_nwpq_nwpq for 12//order-sw prevents it
-run consist_nwp_nwp for 12//order-sw prevents it
-*/
+run consist_nwpq_nwpq for 4 expect 0//order-sw prevents it
+run consist_nwp_nwp for 4 expect 0//order-sw prevents it
