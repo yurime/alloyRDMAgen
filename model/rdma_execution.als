@@ -4,14 +4,21 @@ open sw_rules as sw
 one sig RDMAExecution extends Execution{
 
 }{
+//mo basic definition
+   {mo=^mo}
+   {not cyclic[mo]}
+    {mo_next=mo-mo.mo}
+
   {all disj w1,w2:Writer | 
-                 (host[wl[w1]]=host[wl[w2]]) 
+                 (host[loc[w1]]=host[loc[w2]]) 
                  <=> 
                 ((w1 in w2.mo) or (w2 in w1.mo))
    }
+//{all w1,w2:Writer | w1 in w2.mo_next <=> (w1 in w2.mo and #(w2.mo-w1.mo)=1)}
+{all i:Init, a:Writer-Init| not i in mo[a]}
 
   hb = ^(po_tc+rf+sw+mos)
-
+/*
 //hbqp definition
   hbqp in hb
   {all a: Action, b:a.hb|  b in a.hbqp
@@ -23,7 +30,7 @@ one sig RDMAExecution extends Execution{
       (b in a.rf)
       )
   }// end hbqp defintion
-
+*/
 //hbs definition 
   hbs=^(po_tc+rf +sw+mos)
 
@@ -34,7 +41,7 @@ pred p {
             #Cas= 1}
 
 pred getThenPutF_rdma{RDMAExecution.Consistent=True and getThenPutF}
-pred putAfterPut_rdma{RDMAExecution.Consistent=True and getThenPutF}
+pred putAfterPut_rdma{RDMAExecution.Consistent=True and putAfterPut}
 pred putAndCas_rdma{RDMAExecution.Consistent=True and putAndCas}
 
 

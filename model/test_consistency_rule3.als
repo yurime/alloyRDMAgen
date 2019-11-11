@@ -4,9 +4,9 @@ open driver as d
 //-----------
 
 /* Constructs tests where the mo edge between two Writes is removed*/
-/* Violating W_x --- mo --->W2_x */
-/* Violating       /\                    |     */
-/* Violating        \_____hbs____/    */
+/* Violating W_x --- mo --->W2_x --mo-->W_y */
+/* Violating    \                           po?sw_s  |     */
+/* Violating     \ _--rf-->  R<---hbs---Action */
 /* Violating                                   */
 
 /* Pivots for rule putOrRDMAatomic defined in  base_sw_rules */
@@ -14,16 +14,12 @@ open driver as d
 //fact{nA2Pivot in nWpq}
 
 /* Hypothesis of the nic-ord-sw put or RDMAatomic rule on the pivots */
-fact {let e_t=RDMAExecution | nA2Pivot in nA1Pivot.(e_t.mo_next)
-											and  nA2Pivot in nA1Pivot.(e_t.hbs)}
-
+fact {let e_t=RDMAExecution | nA1Pivot in nA2Pivot.(e_t.mo_next)
+                                            and Witness in nA2Pivot.(iden+po_tc).sw.(e_t.hbs)
+											and Witness in nA1Pivot.rf}
 /* rule from driver*/
 //fact{RDMAExecution_prime.Consistent=True}
 
-one sig Witness2 in R {}
-fact{Witness2  in Witness.po}
-fact{Witness2  in nA1Pivot.rf}
-fact{Witness  in nA2Pivot.rf}
 ------------------------------------------------------------------------
 /** Definition of Execution_prime hb and hbs**/
 ------------------------------------------------------------------------
@@ -38,7 +34,6 @@ and (e_f.hbs=^(po_tc+rf +sw_s+e_f.mos))
 // sanity
 //check {RDMAExecution.Consistent=False} expect 0
 //Note that {RDMAExecution_prime.Consistent=true} comes from base_sw_rules
-
 
 ------------------------------------------------------------------------
 /** Definition of Execution_prime hb and hbs**/
@@ -57,8 +52,9 @@ and (e_f.mo=^(e_f.mo_next))
 //Note that {RDMAExecution_prime.Consistent=true} comes from base_sw_rules
 
 
-run consist_lw_lw for 4
-run consist_lw_nwp for 8
+run consist_lw_lw for 10
+/*run consist_lw_nwp for 8
+run consist_lw_nwpq for 8
 run consist_nwp_lw for 10
 run consist_nwpq_lw for 10
 run consist_nwpq_nwp for 14 //works for 14 not for 12
@@ -66,4 +62,4 @@ run consist_nwp_nwpq for 14 //works for 14 not for 12
 -------------------------------------------------------------------------------
 run consist_nwpq_nwpq for 12//order-sw prevents it
 run consist_nwp_nwp for 12//order-sw prevents it
-run consist_lw_nwpq for 10 // loops for 10 may try 3 threads
+*/

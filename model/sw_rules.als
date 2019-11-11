@@ -12,122 +12,76 @@ fact{all a:nA |
 	a.sw = a.nic_ord_sw+a.poll_cq_sw+a.instr_sw
 and 	a.sw_s = a.nic_ord_sw_s+a.poll_cq_sw_s+a.instr_sw
 }
-
+/*
+if nRp--isw-->nWpq--isw-->nEx--pf->poll then 
+   remove pf and set nRp--pf-->poll  
+*/
 fact{all a:nA |
-	(a in nWp) => a.poll_cq_sw_s= a.(~poll_cq_sw).instr_sw
+	#(nWpq & (a.((~instr_sw) :> nA)))>0 => a.poll_cq_sw_s=none
+	else a in nRp => a.poll_cq_sw_s=a.(instr_sw).(instr_sw).(poll_cq_sw)
 	else a.poll_cq_sw_s=a.poll_cq_sw 
 }
 
 fact{all a:nA |
-	(a in nWp) => a.nic_ord_sw_s= a.~nic_ord_sw_s.instr_sw
+	(a in nWp) => a.nic_ord_sw_s= a.~nic_ord_sw.instr_sw
     else a.nic_ord_sw_s= a.nic_ord_sw
 }
 
 //-----------
 /**instr-sw**/
 //-----------
+fact{all i:Instruction| instr_sw[i.ex]=none}
+
 fact{all put:Put | // sx->nrp->nwpq
-  let sx=actions[put] & Sx_put, 
-      nrp=actions[put] & nRp,
-      nwpq=actions[put] & nWpq,
-      nex=actions[put] & nEx{
-          instr_sw[sx] = nrp and
-          instr_sw[nrp] = nwpq and
-		  instr_sw[nwpq]=nex and 
-          #(instr_sw[nex])=0     
-      }
+          instr_sw[put.sx] = put.nrp and
+          instr_sw[put.nrp] = put.nwpq and
+		  instr_sw[put.nwpq]=put.ex  
 }
 
 
 fact{all get:Get | // sx->nrpq->nwp
-  let sx=actions[get] & Sx_get, 
-      nrpq=actions[get] & nRpq,
-      nwp=actions[get] & nWp,
-      nex=actions[get] & nEx{
-          instr_sw[sx] = nrpq and
-          instr_sw[nrpq] = nwp and
-		      instr_sw[nwp]=nex and 
-          #(instr_sw[nex])=0
-      }
+     instr_sw[get.sx] = get.nrpq and
+     instr_sw[get.nrpq] = get.nwp and
+	 instr_sw[get.nwp]=get.ex
 }
 
 fact{all rga:Rga | // sx->nrwpq->nwp
-  let sx=actions[rga] & Sx_rga, 
-      nrwpq=actions[rga] & nRWpq,
-      nwp=actions[rga] & nWp,
-      nex=actions[rga] & nEx{
-          instr_sw[sx] = nrwpq and
-          instr_sw[nrwpq] = nwp and
-		  instr_sw[nwp]=nex and 
-          #(instr_sw[nex])=0
-     }
+          instr_sw[rga.sx] = rga.nrwpq and
+          instr_sw[rga.nrwpq] = rga.nwp and
+		  instr_sw[rga.nwp]=rga.ex 
 }
 
 fact{all cas:Cas | // sx->nrwpq->nwp
-  let sx=actions[cas] & Sx_cas, 
-      nrwpq=actions[cas] & nRWpq,
-      nwp=actions[cas] & nWp,
-      nex=actions[cas] & nEx{
-          instr_sw[sx] = nrwpq and
-          instr_sw[nrwpq] = nwp and
-		  instr_sw[nwp]=nex and 
-          #(instr_sw[nex])=0
-     }
+          instr_sw[cas.sx] = cas.nrwpq and
+          instr_sw[cas.nrwpq] = cas.nwp and
+		  instr_sw[cas.nwp]=cas.ex 
 }
 fact{all put:PutF |// sx->nf->nrp->nwpq
-  let sx=actions[put] & Sx_put, 
-      nrp=actions[put] & nRp,
-      nf=actions[put] & nF,
-      nwpq=actions[put] & nWpq,
-      nex=actions[put] & nEx{
-          instr_sw[sx] = nf and
-          instr_sw[nf] = nrp and
-          instr_sw[nrp] = nwpq and
-		  instr_sw[nwpq]=nex and 
-          #(instr_sw[nex])=0
-     }
+          instr_sw[put.sx] = put.nf and
+          instr_sw[put.nf] = put.nrp and
+          instr_sw[put.nrp] = put.nwpq and
+		  instr_sw[put.nwpq]=put.ex 
 }
 
 fact{all get:GetF | // sx->nf->nrpq->nwp
-  let sx=actions[get] & Sx_get, 
-      nrpq=actions[get] & nRpq,
-      nf=actions[get] & nF,
-      nwp=actions[get] & nWp,
-      nex=actions[get] & nEx{
-          instr_sw[sx] = nf and
-          instr_sw[nf] = nrpq and
-          instr_sw[nrpq] = nwp and
-		      instr_sw[nwp]=nex and 
-          #(instr_sw[nex])=0
-      }
+          instr_sw[get.sx] =get.nf and
+          instr_sw[get.nf] = get.nrpq and
+          instr_sw[get.nrpq] = get.nwp and
+          instr_sw[get.nwp]=get.ex
 }
 
 fact{all rga:RgaF | // sx->nf->nrwpq->nwp
-  let sx=actions[rga] & Sx_rga, 
-      nrwpq=actions[rga] & nRWpq,
-      nf=actions[rga] & nF,
-      nwp=actions[rga] & nWp,
-      nex=actions[rga] & nEx{
-          instr_sw[sx] = nf and
-          instr_sw[nf] = nrwpq and
-          instr_sw[nrwpq] = nwp and
-		      instr_sw[nwp]=nex and 
-          #(instr_sw[nex])=0
-     }
+          instr_sw[rga.sx] =rga.nf and
+          instr_sw[rga.nf] = rga.nrwpq and
+          instr_sw[rga.nrwpq] = rga.nwp and
+	      instr_sw[rga.nwp]=rga.ex 
 }
 
 fact{all cas:CasF | // sx->nf->nrwpq->nwp
-  let sx=actions[cas] & Sx_cas, 
-      nrwpq=actions[cas] & nRWpq,
-      nf=actions[cas] & nF,
-      nwp=actions[cas] & nWp,
-      nex=actions[cas] & nEx{
-          instr_sw[sx] = nf and
-          instr_sw[nf] = nrwpq and
-          instr_sw[nrwpq] = nwp and
-		      instr_sw[nwp]=nex and 
-          #(instr_sw[nex])=0
-     }
+          instr_sw[cas.sx] = cas.nf and
+          instr_sw[cas.nf] = cas.nrwpq and
+          instr_sw[cas.nrwpq] = cas.nwp and
+	      instr_sw[cas.nwp]=cas.ex 
 }
 
 //-------------
@@ -153,6 +107,7 @@ pred putLocalPart [na1:nA,na2:nA]{
 
 
 pred nicFence [na1:nA,na2:nA] {
+			(na1 in nEx) and
 			(na2 in na1.ipo) and//forcing same queuepair and starting thread
             (na2 in nF)  // sx1-->nRpq-->nWp
 	        				  // ↓po                  ↓nic_ord_sw
@@ -177,23 +132,28 @@ fact{all disj na1,na2:nA |
 
 fact{poll_cq_sw=~co_poll_cq_sw}
 
-
-fact{all disj na:nA, pcq:poll_cq  | 
-          pcq=na.poll_cq_sw => pcq in (na.instr.actions & Sx).po_tc
+// pcq is after (in po) the sx of the polled instruction
+// and it is on the same queue pair
+fact{all disj na:nEx, pcq:poll_cq  | 
+          (pcq=na.poll_cq_sw => 
+                      (
+                         (pcq in na.instr.sx.po_tc)
+                          and (sameOandD[pcq,na.instr.ex])
+                      )
+         )
 }
 
 
 fact{all disj na1, na2:nEx, pcq2:poll_cq | 
 (pcq2=na2.poll_cq_sw
   and (na2 in na1.ipo))
-=> (some pcq1:poll_cq| 
-        (pcq2 in pcq1.po_tc)
-        and pcq1=na1.poll_cq_sw
-      )
+=> #(na1.poll_cq_sw)>0
 }
 
 
-fact {all nr:(nA&Reader),nw:(nA&Writer) | nw in nr.instr_sw => wV[nw]=rV[nr]}
+// values flow in rdma instructions
+fact {all disj nr:(nA&Reader),nw:(nA&Writer) | 
+          nw in nr.instr_sw => wV[nw]=rV[nr]}
 
 /*pred p1 { 
            #PutF = 1 and

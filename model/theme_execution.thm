@@ -3,24 +3,20 @@
 
 <view>
 
-<projection> <type name="Execution"/> </projection>
-
 <defaultnode/>
 
 <defaultedge/>
 
 <node>
    <type name="Int"/>
+   <type name="RDMAExecution"/>
    <type name="String"/>
-   <type name="Univ"/>
    <type name="univ"/>
-   <type name="d/Dummy"/>
+   <type name="e/Boolean"/>
+   <type name="e/Execution"/>
+   <type name="e/False"/>
+   <type name="e/True"/>
    <type name="seq/Int"/>
-   <type name="d/e/RDMAExecution"/>
-   <type name="Boolean"/>
-   <type name="Execution"/>
-   <type name="False"/>
-   <type name="True"/>
    <type name="sw/a/Action"/>
    <type name="sw/a/Cas"/>
    <type name="sw/a/CasF"/>
@@ -31,6 +27,7 @@
    <type name="sw/a/LocalCPUaction"/>
    <type name="sw/a/MemoryLocation"/>
    <type name="sw/a/nA"/>
+   <type name="sw/a/nEx"/>
    <type name="sw/a/nF"/>
    <type name="sw/a/Node"/>
    <type name="sw/a/nR"/>
@@ -55,32 +52,21 @@
    <type name="sw/a/Thr"/>
    <type name="sw/a/U"/>
    <type name="sw/a/W"/>
-   <set name="Consistent" type="Boolean"/>
    <set name="sw/a/RDMAaction" type="sw/a/Action"/>
    <set name="sw/a/Reader" type="sw/a/Action"/>
    <set name="sw/a/Writer" type="sw/a/Action"/>
 </node>
 
-<node color="Blue">
-   <set name="d/b/nA1Pivot" type="sw/a/Action"/>
-   <set name="d/b/Witness" type="sw/a/Action"/>
-</node>
-
-<node color="Red">
-   <set name="d/b/nA2Pivot" type="sw/a/Action"/>
-</node>
-
 <edge visible="no">
    <relation name="actions"> <type name="sw/a/Instruction"/> <type name="sw/a/nA"/> </relation>
    <relation name="actions"> <type name="sw/a/Instruction"/> <type name="sw/a/Sx"/> </relation>
-   <relation name="co_poll_cq_sw"> <type name="sw/a/poll_cq"/> <type name="sw/a/nA"/> </relation>
+   <relation name="co_poll_cq_sw"> <type name="sw/a/poll_cq"/> <type name="sw/a/nEx"/> </relation>
    <relation name="copo"> <type name="sw/a/LocalCPUaction"/> <type name="sw/a/LocalCPUaction"/> </relation>
    <relation name="corf"> <type name="sw/a/Action"/> <type name="sw/a/Action"/> </relation>
-   <relation name="hb"> <type name="sw/a/Action"/> <type name="sw/a/Action"/> </relation>
-   <relation name="hbqp"> <type name="sw/a/Action"/> <type name="sw/a/Action"/> </relation>
-   <relation name="hbs"> <type name="sw/a/Action"/> <type name="sw/a/Action"/> </relation>
+   <relation name="hb"> <type name="e/Execution"/> <type name="sw/a/Action"/> <type name="sw/a/Action"/> </relation>
+   <relation name="hbqp"> <type name="e/Execution"/> <type name="sw/a/Action"/> <type name="sw/a/Action"/> </relation>
+   <relation name="hbs"> <type name="e/Execution"/> <type name="sw/a/Action"/> <type name="sw/a/Action"/> </relation>
    <relation name="ipo"> <type name="sw/a/nA"/> <type name="sw/a/nA"/> </relation>
-   <relation name="mos"> <type name="sw/a/Action"/> <type name="sw/a/Action"/> </relation>
    <relation name="po_tc"> <type name="sw/a/LocalCPUaction"/> <type name="sw/a/LocalCPUaction"/> </relation>
    <relation name="sw"> <type name="sw/a/Action"/> <type name="sw/a/Action"/> </relation>
 </edge>

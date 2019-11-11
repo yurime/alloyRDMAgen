@@ -14,8 +14,8 @@ sig RDMAaction_prime in RDMAaction {
 }
 
 /* Witness */
-one sig Witness in Reader {
-}
+one sig Witness in Reader {}
+
 /* Witness2 */
 //one sig Witness2 in Reader {}
 

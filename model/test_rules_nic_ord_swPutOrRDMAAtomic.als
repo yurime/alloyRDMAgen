@@ -40,9 +40,13 @@ fact{all a:nA|
 /** Definition of Execution_prime hb and hbs**/
 ------------------------------------------------------------------------
 fact{let e=RDMAExecution_prime |
-  (e.hb) = ^(po_tc+rf+sw_prime)
+  ((e.hb) = ^(po_tc+rf+sw_prime))
+//mo basic definition
+   and(e.mo=^(e.mo))
+   and(not cyclic[e.mo])
+   and({all a:Writer | a.(e.mo_next)=a.(e.mo)-a.(e.mo).(e.mo)})
 }
-
+/*
 fact{let e=RDMAExecution_prime |
 //hbqp definition
   (e.hbqp) in (e.hb)
@@ -63,6 +67,7 @@ fact{let e=RDMAExecution_prime |
   (e.hbs)=^((e.hbqp)+(e.mos))
 }// end of sig RDMAexecution_prime rules
 
+*/
 //The Witness definition
 fact {Witness in nA1Pivot.rf and 
         Witness in nA2Pivot.(RDMAExecution_prime.hbs)
@@ -84,4 +89,4 @@ pred show {
         }
 
 
-run {show} for 11
+run show for 16

@@ -6,7 +6,7 @@ open rdma_execution as e
 fact {Node = host[Thr]}
 
 // read from all variables 
-fact { rl[Reader] = MemoryLocation }
+fact { loc[Reader] = MemoryLocation }
 
 // eliminate unused threads 
 fact {Thr = o[Action]}
@@ -28,7 +28,7 @@ fact {Writer - Init in corf[R]}
 /* Generate distinct write values for initial values and local writes */
 fact { all disj w1, w2: W+Init| not (wV[w1] = wV[w2])}
 
-/* Values written by local writes are between [0 .. #Write]*/
+/* Values written by writes are between [0 .. #Write]*/
 fact { all w: Writer| 0 <=  wV[w] and wV[w] < #W}
 
 
@@ -36,7 +36,7 @@ fact { all w: Writer| 0 <=  wV[w] and wV[w] < #W}
 
 // Prevent writing of the same value to have an observalble effect
 fact{wV[nA1Pivot]=0 and 1=wV[nA2Pivot]}
-fact{wl[nA1Pivot]=wl[nA2Pivot]}
+fact{loc[nA1Pivot]=loc[nA2Pivot]}
 fact{not nA2Pivot in Init}
 
 
@@ -58,34 +58,100 @@ fact {Witness in nA1Pivot.rf and
 
 // preventing the put to read from after the sx (legitimate but bad programming practice)
 // is value undefined?
-fact{all i:Instruction, nrp:i.actions&nRp, sx:i.actions&Sx | not( corf[nrp] in sx.po_tc )}
-
-// preventing the reader to read from after the sx (legitimate but bad programming practice)
-// is value undefined?
-fact{all i:Instruction, nrp:i.actions&nRp, sx:i.actions&Sx | not( corf[nrp] in sx.po_tc )}
+fact{all nrp:nRp| not(corf[nrp] in nrp.instr.sx.po_tc )}
 
 
-// preventing the RDMA action local memory accessed  by following instructions
-fact{all i:Instruction,  
-		nrp:nRp, sx:Sx, w:Writer| 
-          (nrp in i.actions and sx in i.actions and w in sx.po_tc)
-           => not( rl[nrp] = wl[w] )}
-
-
-fact{all disj r1,r2:R| not reg[r1]=reg[r2]}
-
-
+/*
+//avoid unrelated actions -- a lot slower
 fact{all a:Action| let e=RDMAExecution |
 							(a in Witness.sw) or (Witness in a.(e.hb))
 							or (a in nA1Pivot.sw) or (nA1Pivot in a.(e.hb))
 							or (a in nA2Pivot.sw) or (nA2Pivot in a.(e.hb))
-     
+							or(0<#(R & a.po)) 
 }
-
+*/
 /* removes Univ objects */
 sig Dummy {}
 fact { no Dummy }
 
 fact{RDMAExecution_prime.Consistent=True}
 
+pred oneThread { #Thr = 1 }
+pred twoThreads { #Thr = 2 }
+pred threeThreads { #Thr = 2 }
+
+/* Properties of the test */
+pred consist_lw_lw {
+            (nA1Pivot in W) and
+           (nA2Pivot in W) and
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+            #Thr = 2
+        }
+pred consist_lw_nwp {
+            (nA1Pivot in W) and
+           (nA2Pivot in nWp) and
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+            #Thr = 2
+        }
+pred consist_lw_nwpq {
+            (nA1Pivot in W) and
+           (nA2Pivot in nWpq) and
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+            #Thr = 2
+        }
+
+pred consist_nwp_lw {
+            (nA1Pivot in nWp) and
+           (nA2Pivot in W) and
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+            #Thr = 2
+        }
+pred consist_nwp_nwp {
+            (nA1Pivot in nWp) and
+           (nA2Pivot in nWp) and
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+            #Thr = 2
+        }
+pred consist_nwp_nwpq {
+            (nA1Pivot in nWp) and
+           (nA2Pivot in nWpq) and
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+            #Thr = 2
+        }
+pred consist_nwpq_lw {
+            (nA1Pivot in nWpq) and
+           (nA2Pivot in W) and
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+            #Thr = 2
+        }
+pred consist_nwpq_nwp {
+            (nA1Pivot in nWpq) and
+           (nA2Pivot in nWp) and
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+            #Thr = 2
+        }
+pred consist_nwpq_nwpq {
+            (nA1Pivot in nWpq) and
+           (nA2Pivot in nWpq) and
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+            #Thr = 2
+        }
 

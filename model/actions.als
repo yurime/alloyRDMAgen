@@ -18,10 +18,10 @@ sig Register{
   o: one Thr
 }
 
-fact { all r: Register| o[r] = o[~reg[r]] }
+fact{all r:Register| #(~reg[r])=1
+                 and  o[r] = o[~reg[r]] }
 
 abstract sig Action {
-
 	/* destination and origin thread of the action */	
 	d, o : one Thr
 }
@@ -31,15 +31,19 @@ pred sameOandD [a,b:Action] {o[a]=o[b] and  d[a]=d[b] }
 pred remoteMachineAction [a:Action] { not host[o[a]]=host[d[a]] }
 pred localMachineAction [a:Action] { host[o[a]]=host[d[a]] }
 
-sig Reader in Action {
-	rl: one MemoryLocation,
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
+
+sig Reader in MemoryAction {
 	rV: one Int,
 	corf: one Writer
 }
 
 
-sig Writer in Action {
-	wl: one MemoryLocation,
+sig Writer in MemoryAction {
 	wV: one Int,
 	rf: set Reader
 }
@@ -49,6 +53,8 @@ fact{~rf=corf}
 sig Init extends W{}
 
 sig RDMAaction in Action {
+	instr : one Instruction,
+	instr_sw: lone nA,
     sw : set Action,
     sw_s : set Action
 }
@@ -60,55 +66,51 @@ abstract sig LocalCPUaction extends Action{
 	copo : set LocalCPUaction
 }
 
-/* start NIC action (start external)*/
-abstract sig Sx extends LocalCPUaction{
-	instr : one Instruction,
-	instr_sw: one nA
+//fact{all a: LocalCPUaction | a.po = a.po_tc - a.po_tc.po_tc} // for displaying po. 
+
+fact{po_tc=^po_tc
+         and(po_tc=~copo) // for displaying po. 
+        and(po=po_tc-po_tc.po_tc)
 }
 
-sig Sx_put extends Sx {}
-sig Sx_get extends Sx {}
-sig Sx_cas extends Sx {}
-sig Sx_rga extends Sx {}
+/* start NIC action (start external)*/
+sig Sx extends LocalCPUaction{}
 
-fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
-fact {all sx: Sx| (sx in RDMAaction)}
-fact {all sx: Sx| remoteMachineAction[sx]}
+fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)
+		and (sx in RDMAaction)
+		and remoteMachineAction[sx]
+}
 /*CPU read*/
 sig R extends LocalCPUaction{
    reg : one Register
 }
-fact {all r:R| r in Reader and not(r in Writer)}
-fact {all a:R| not(a in RDMAaction)}
-fact {all disj a, b: R|
-				not (reg[a] = reg[b])}
-fact {all a:R| localMachineAction[a]}
+fact {all r:R| r in Reader and not(r in Writer)
+				and not(r in RDMAaction)
+				and localMachineAction[r]}
+
 /*CPU write*/
 sig W extends LocalCPUaction{}
-fact {all w:W| w in Writer and not(w in Reader)}
-fact {all a:W| not(a in RDMAaction)}
-fact {all a:W| localMachineAction[a]}
+fact {all w:W| w in Writer and not(w in Reader)
+				and not(w in RDMAaction)
+				and localMachineAction[w]}
 
 /*c-atomics*/
 sig U extends LocalCPUaction {}
-fact {all u:U| u in Writer and u in Reader}
-fact {all a:U| not(a in RDMAaction)}
-fact {all a:U| localMachineAction[a]}
+fact {all u:U| u in Writer and u in Reader
+				and not(u in RDMAaction)
+				and localMachineAction[u]}
 /*NIC action*/
 abstract sig nA extends Action{
-	instr : one Instruction,
-	instr_sw: lone nA,
     nic_ord_sw: set nA,
     nic_ord_sw_s: set nA,
-    poll_cq_sw: lone poll_cq,
     poll_cq_sw_s: lone poll_cq,
 	ipo: set nA
 }
 fact {all a:nA| (a in RDMAaction)}
 fact {all a1,a2:nA| 
 			(a2 in a1.ipo) iff (
-				(a2.instr.actions & Sx) 
-                       in (a1.instr.actions & Sx).po_tc
+				(a2.instr.sx) 
+                       in (a1.instr.sx.po_tc)
 			)
 }
 
@@ -143,150 +145,121 @@ fact { all a: nWp| localMachineAction[a]}
 
 /*NIC read-write*/
 sig nRWpq extends nA{}
-fact {all rw:nRWpq| rw in Writer and rw in Reader}
-fact { all a: nRWpq| remoteMachineAction[a]}
+fact {all rw:nRWpq| rw in Writer and rw in Reader
+                       and remoteMachineAction[rw]}
 
 
 /*RDMA Fence*/
 sig nF extends nA {}
-fact {all f:nF| not(f in Writer) and not (f in Reader)}
-fact {all a: nF| localMachineAction[a]}
+fact {all f:nF| not(f in Writer) and not (f in Reader)
+                       and  localMachineAction[f]}
 
 
-sig nEx extends nA {}
-fact {all a:nEx| not(a in Writer) and not (a in Reader)}
-fact {all a: nEx| localMachineAction[a]}
+sig nEx extends nA {
+    poll_cq_sw: lone poll_cq
+}
+fact {all a:nEx| not(a in Writer) and not (a in Reader)
+                       and remoteMachineAction[a]}
 
 /*poll_cq*/
 sig poll_cq extends LocalCPUaction {
   co_poll_cq_sw:one nEx
 }
-fact {all p:poll_cq| not(p in Writer) and not (p in Reader)}
-fact {all a:poll_cq| not (a in RDMAaction)}
-fact {all a:poll_cq| remoteMachineAction[a]}
+fact {all p:poll_cq| not(p in Writer) and not (p in Reader)
+                             and not (p in RDMAaction)
+                             and remoteMachineAction[p]}
 /* RDMA instructions and the actions that compose them*/
 abstract sig Instruction {
-	actions: set Sx+nA
+	actions: set RDMAaction,
+    sx:one Sx,
+    ex:one nEx
 }{
-  all disj a1,a2:actions | o[a1]=o[a2]
+  (one o[actions])
+  and (ex in actions) 
+  and (sx in actions) 
 }
 
-fact {all a: Sx| all i: Instruction | instr[a] = i iff a in i.actions}
-fact {all a: nA| all i: Instruction | instr[a] = i iff a in i.actions}
+/*fact {all disj i1,i2: Instruction | 
+                   and (0=#(i1.actions & i2.actions))
+        }
+*/
+fact{all a:RDMAaction|
+    remoteMachineAction[a] => (sameOandD[a,a.instr.sx]
+                                             and sameOandD[a,a.instr.ex])
+}
+fact {all a:RDMAaction| all i: Instruction | instr[a] = i iff a in i.actions}
 
-sig Put extends Instruction {}{ 
-  #actions = 4 and 
-  #(actions & Sx_put) = 1 and 
-  #(actions & nRp) = 1 and 
-  #(actions & nWpq) = 1    and 
-  #(actions & nEx) = 1  and  
-  (let sx= actions&Sx,
-   nrp=actions & nRp,
-      nwpq=actions & nWpq{
-       rV[nrp] = wV[nwpq] and
-		sameOandD[sx,nwpq]
-   })
+abstract sig NFInstruction extends Instruction{}{
+#actions = 4
+}
+abstract sig FInstruction extends Instruction{
+    nf:one nF
+}{
+(nf in actions) and
+(#actions = 5)
 }
 
-sig Get extends Instruction {}{
-  #actions = 4 and 
-  #(actions & Sx_get) = 1 and 
-  #(actions & nRpq) = 1 and 
-  #(actions & nWp) = 1   and 
-  #(actions & nEx) = 1  and  
-  (let sx= actions&Sx,
-   nrpq=actions & nRpq,
-      nwp=actions & nWp{
-       rV[nrpq] = wV[nwp] and
-		sameOandD[sx,nrpq]
-   })
+sig Put extends NFInstruction {
+	nrp: one nRp,
+	nwpq: one nWpq
+}{  
+  (nrp in actions) and 
+  (nwpq in actions)
 }
 
-sig Rga extends Instruction {}{
-  #actions = 4 and 
-  #(actions & Sx_rga) = 1 and 
-  #(actions & nRWpq) = 1 and 
-  #(actions & nWp) = 1  and 
-  #(actions & nEx) = 1  and 
-  (let sx= actions&Sx,
-   nrwpq=actions & nRWpq,
-      nwp=actions & nWp{
-       rV[nrwpq] = wV[nwp] and
-		sameOandD[sx,nrwpq]
-   })
+sig Get extends NFInstruction {
+	nrpq: one nRpq,
+	nwp: one nWp
+}{
+  (nrpq in actions) and 
+  (nwp in actions) 
 }
 
-sig Cas extends Instruction {}{
-  #actions = 4 and 
-  #(actions & Sx_cas) = 1 and 
-  #(actions & nRWpq) = 1 and 
-  #(actions & nWp) = 1   and 
-  #(actions & nEx) = 1  and 
-  (let sx= actions&Sx,
-   nrwpq=actions & nRWpq,
-      nwp=actions & nWp{
-       rV[nrwpq] = wV[nwp] and
-		sameOandD[sx,nrwpq]
-   })
+sig Rga extends NFInstruction {
+	nrwpq: one nRWpq,
+	nwp: one nWp
+}{
+  (nrwpq in actions) and 
+  (nwp in actions)  
+}
+
+sig Cas extends NFInstruction {
+	nrwpq: one nRWpq,
+	nwp: one nWp
+}{
+  (nrwpq in actions) and 
+  (nwp in actions) 
 }
 
 // instructions with a nic fence
-sig PutF extends Instruction {}{ 
-  #actions = 5 and 
-  #(actions & Sx_put) = 1 and 
-  #(actions & nF) = 1 and 
-  #(actions & nRp) = 1 and 
-  #(actions & nWpq) = 1   and 
-  #(actions & nEx) = 1  and 
-  (let sx= actions&Sx,
-   nrp=actions & nRp,
-      nwpq=actions & nWpq{
-       rV[nrp] = wV[nwpq] and
-		sameOandD[sx,nwpq]
-   })
+sig PutF extends FInstruction {
+	nrp: one nRp,
+	nwpq: one nWpq
+}{ 
+  (nrp in actions) and 
+  (nwpq in actions) 
 }
-sig GetF extends Instruction {}{
-  #actions = 5 and 
-  #(actions & Sx_get) = 1 and 
-  #(actions & nF) = 1 and  
-  #(actions & nRpq) = 1 and 
-  #(actions & nWp) = 1 and 
-  #(actions & nEx) = 1  and 
-  (let  sx= actions&Sx,
-   nrpq=actions & nRpq,
-        nwp=actions & nWp{
-    rV[nrpq] = wV[nwp] and
-		sameOandD[sx,nrpq]
-   })
+sig GetF extends FInstruction {	
+    nrpq: one nRpq,
+	nwp: one nWp
+}{
+  (nrpq in actions) and 
+  (nwp in actions)
 }
-sig RgaF extends Instruction {}{
-  #actions = 5 and 
-  #(actions & Sx_rga) = 1 and 
-  #(actions & nF) = 1 and  
-  #(actions & nRWpq) = 1 and 
-  #(actions & nWp) = 1   and
-  #(actions & nEx) = 1  and 
-  (let sx= actions&Sx,
-   nrwpq=actions & nRWpq,
-      nwp=actions & nWp{
-       rV[nrwpq] = wV[nwp] and
-		sameOandD[sx,nrwpq]
-   })
+sig RgaF extends FInstruction {
+	nrwpq: one nRWpq,
+	nwp: one nWp
+}{
+  (nrwpq in actions) and 
+  (nwp in actions)
 }
 
-sig CasF extends Instruction {}{
-  #actions = 5 and 
-  #(actions & Sx_cas) = 1 and
-  #(actions & nF) = 1 and   
-  #(actions & nRWpq) = 1 and 
-  #(actions & nWp) = 1  and 
-  #(actions & nEx) = 1  and 
-  (let sx= actions&Sx,
-   nrwpq=actions & nRWpq,
-      nwp=actions & nWp{
-       rV[nrwpq] = wV[nwp] and
-		sameOandD[sx,nrwpq]
-   })
+sig CasF extends FInstruction {
+	nrwpq: one nRWpq,
+	nwp: one nWp
+}{
+  (nrwpq in actions) and 
+  (nwp in actions)
 }
 
 
@@ -294,32 +267,26 @@ sig CasF extends Instruction {}{
 //--- Reader/Writer rules
 
 //rf implies shared location and value
-fact{all w:Writer, r:rf[w] | rl[r]=wl[w] and rV[r]=wV[w]}
+fact{all w:Writer, r:rf[w] | loc[r]=loc[w] and rV[r]=wV[w]}
 
 // atomic actions non recursive and atomic to one location
-fact{all a:Action | not a.rf=a}
-fact{all w:Writer&Reader | rl[w]=wl[w] }
+fact{all w:Writer&Reader | not w.rf=w}
 
 
-// read/write from the same machine as the action destination
-fact{all r:Reader | host[rl[r]]=host[d[r]] }
-fact{all w:Writer | host[wl[w]]=host[d[w]] }
 
 //---- Init rules
 // All memory locations must be initialized
-fact{Init.wl=MemoryLocation}
+fact{Init.loc=MemoryLocation}
 
 // Init or a sequence of it is the first instruction
 fact{Init.~po_tc in Init}
 
 // one Init per one location
-fact  {all disj i1,i2:Init| not wl[i1]=wl[i2]}
+fact  {all disj i1,i2:Init| not loc[i1]=loc[i2]}
 
 //--- Local CPUAction Rules
-fact {po_tc=^po_tc}
-fact {po_tc=~copo}
-fact{not cyclic[po_tc]}
-fact{all a,b:Action| b in a.po iff ((b in a.po_tc) and #(a.po_tc - b.po_tc)=1)} // for displaying po. 
+
+fact{not cyclic[po_tc+rf]}
 fact {all disj a,b: LocalCPUaction| 
                                       (o[a] = o[b])
                                       iff
@@ -335,22 +302,21 @@ fact {all disj a,b: LocalCPUaction|
 //run{some disj i1,i2:Instruction | #(actions[i1]&actions[i2])>0} for 8
 
 pred p { 
-           #Cas = 1 and
+           #Put = 1 and
             #Thr = 2}
 
 pred getThenPutF {  // needs at least 12
             #Get > 0 and
             #PutF > 0 and
             #poll_cq = 2  and
-			 #(Sx & Sx_get.po_tc) > 0 and
-			 #(poll_cq & Sx_get.po_tc) > 0 and
+			 #(Get.sx.po_tc) > 0 and
+			 #(poll_cq & Get.sx.po_tc) > 0 and
             #Thr = 2}
 
 pred putAfterPut { 
             #Put >1 and
             #poll_cq >1   and
-			 #(Sx & Sx_put.po_tc) > 0 and
-			 #(poll_cq & Sx_put.po_tc) > 0 and
+			 #(Put.sx & Put.sx.po_tc) > 0 and
             #Thr = 2}
 
 
@@ -363,4 +329,4 @@ run getThenPutF for 13
 run putAfterPut for 12
 run putAndCas for 10
 
-run p for 8
+run p for 10
