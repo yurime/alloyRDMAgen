@@ -15,26 +15,17 @@ abstract sig LocalCPUaction extends Action{
     po: lone LocalCPUaction, // for displaying po.
   copo : set LocalCPUaction
 }
+fact{po_tc=^po_tc
+         and(po_tc=~copo) // for displaying po. 
+        and(po=po_tc-po_tc.po_tc)
+}
+
+
 
 pred cyclic [rel:Action->Action] {some a:Action | a in ^rel[a]}
 pred remoteMachineAction [a:Action] { not host[o[a]]=host[d[a]] }
 pred localMachineAction [a:Action] { host[o[a]]=host[d[a]] }
 pred sameOandD [a,b:Action] {o[a]=o[b] and  d[a]=d[b] }
-
-fact {po_tc=^po_tc}
-fact {po_tc=~copo}
-fact{not cyclic[po_tc]}
-fact{all a,b:Action| b in a.po iff ((b in a.po_tc) and #(a.po_tc - b.po_tc)=1)} // for displaying po. 
-fact {all disj a,b: LocalCPUaction| 
-                                      (o[a] = o[b])
-                                      iff
-                                      (
-                                        (a in b.po_tc) or
-                                        (a in b.copo) 
-                                      )
-}
-
-
 
 sig MemoryAction in Action{
 	loc: one MemoryLocation
@@ -65,7 +56,16 @@ fact {all w:W| w in Writer and not(w in Reader)}
 fact {all a:W| not(a in RDMAaction)}
 fact {all a: W| localMachineAction[a]}
 
+sig nEx extends nA {
+    poll_cq_sw: lone poll_cq
+}
+fact {all a:nEx| not(a in Writer) and not (a in Reader)
+                       and remoteMachineAction[a]}
+
+
 sig RDMAaction in Action {
+	instr : one Instruction,
+	instr_sw: lone nA,
     sw : set Action
 }
 
@@ -86,14 +86,12 @@ abstract sig NFInstruction extends Instruction{}{
 fact {all a: Sx| all i: Instruction | instr[a] = i iff a in i.actions}
 fact {all a: nA| all i: Instruction | instr[a] = i iff a in i.actions}
 
-abstract sig Sx extends LocalCPUaction{
-  instr: one Instruction,
-  instr_sw: one nA
-}
-fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
-fact {all sx: Sx| (sx in RDMAaction)}
-fact {all a: Sx| remoteMachineAction[a]}
+sig Sx extends LocalCPUaction{}
 
+fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)
+		and (sx in RDMAaction)
+		and remoteMachineAction[sx]
+}
 /*poll_cq*/
 sig poll_cq extends LocalCPUaction {
   co_poll_cq_sw:one nA
@@ -105,16 +103,18 @@ fact {all a:poll_cq| remoteMachineAction[a]}
 
 sig Sx_put extends Sx {}
 
-
 /*NIC action*/
 abstract sig nA extends Action{
-	instr : one Instruction,
-	instr_sw: lone nA,
     nic_ord_sw: set nA,
-    poll_cq_sw: lone poll_cq
+	ipo: set nA
 }
 fact {all a:nA| (a in RDMAaction)}
-
+fact {all a1,a2:nA| 
+			(a2 in a1.ipo) iff (
+				(a2.instr.sx) 
+                       in (a1.instr.sx.po_tc)
+			)
+}
 
 /*NIC Read*/
 abstract sig nR extends nA{}
@@ -160,24 +160,27 @@ fact{all put:Put | // sx->nrp->nwpq
 //------------
 /** poll_cq_sw **/
 //------------
+
 fact{poll_cq_sw=~co_poll_cq_sw}
 
-
-fact{all disj na2:nA, pcq:poll_cq | 
-(pcq in poll_cq_sw[na2])
-iff 
-  (some na1:nA,sx:Sx { //sx->na1->na2 ---pol_cq_sw---> pcq
-      (na2 in instr_sw[na1] ) and 
-      (na1 in instr_sw[sx] ) and
-      sameOandD[pcq,sx] and
-      (pcq in sx.po_tc) and
-          (// num act submitted = num actions acknowledged
-           #(sx.^~po_tc & {a:Sx | sameOandD[a,sx]}) 
-                = #(pcq.^~po_tc & {a:poll_cq | sameOandD[a,pcq]})
-           )
-  }//end of some na1,sx
-  )
+// pcq is after (in po) the sx of the polled instruction
+// and it is on the same queue pair
+fact{all disj na:nEx, pcq:poll_cq  | 
+          (pcq=na.poll_cq_sw => 
+                      (
+                         (pcq in na.instr.sx.po_tc)
+                          and (sameOandD[pcq,na.instr.ex])
+                      )
+         )
 }
+
+
+fact{all disj na1, na2:nEx, pcq2:poll_cq | 
+(pcq2=na2.poll_cq_sw
+  and (na2 in na1.ipo))
+=> #(na1.poll_cq_sw)>0
+}
+
 
 fact {all nr:(nA&Reader),nw:(nA&Writer) | nw in nr.instr_sw => wV[nw]=rV[nr]}
 
@@ -218,4 +221,4 @@ pred twoThreads { #Thr = 2 }
 
 pred show {}
 
-run show for 8
+run show for 9

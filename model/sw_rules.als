@@ -35,53 +35,61 @@ fact{all i:Instruction| instr_sw[i.ex]=none}
 fact{all put:Put | // sx->nrp->nwpq
           instr_sw[put.sx] = put.nrp and
           instr_sw[put.nrp] = put.nwpq and
-		  instr_sw[put.nwpq]=put.ex  
+		  instr_sw[put.nwpq]=put.ex   and
+          instr_sw[put.ex]=none  
 }
 
 
 fact{all get:Get | // sx->nrpq->nwp
      instr_sw[get.sx] = get.nrpq and
      instr_sw[get.nrpq] = get.nwp and
-	 instr_sw[get.nwp]=get.ex
+	 instr_sw[get.nwp]=get.ex  and
+     instr_sw[get.ex]=none 
 }
 
 fact{all rga:Rga | // sx->nrwpq->nwp
           instr_sw[rga.sx] = rga.nrwpq and
           instr_sw[rga.nrwpq] = rga.nwp and
-		  instr_sw[rga.nwp]=rga.ex 
+		  instr_sw[rga.nwp]=rga.ex    and
+          instr_sw[rga.ex]=none  
 }
 
 fact{all cas:Cas | // sx->nrwpq->nwp
           instr_sw[cas.sx] = cas.nrwpq and
           instr_sw[cas.nrwpq] = cas.nwp and
-		  instr_sw[cas.nwp]=cas.ex 
+		  instr_sw[cas.nwp]=cas.ex    and
+          instr_sw[cas.ex]=none  
 }
 fact{all put:PutF |// sx->nf->nrp->nwpq
           instr_sw[put.sx] = put.nf and
           instr_sw[put.nf] = put.nrp and
           instr_sw[put.nrp] = put.nwpq and
-		  instr_sw[put.nwpq]=put.ex 
+		  instr_sw[put.nwpq]=put.ex    and
+          instr_sw[put.ex]=none  
 }
 
 fact{all get:GetF | // sx->nf->nrpq->nwp
           instr_sw[get.sx] =get.nf and
           instr_sw[get.nf] = get.nrpq and
           instr_sw[get.nrpq] = get.nwp and
-          instr_sw[get.nwp]=get.ex
+          instr_sw[get.nwp]=get.ex  and
+         instr_sw[get.ex]=none 
 }
 
 fact{all rga:RgaF | // sx->nf->nrwpq->nwp
           instr_sw[rga.sx] =rga.nf and
           instr_sw[rga.nf] = rga.nrwpq and
           instr_sw[rga.nrwpq] = rga.nwp and
-	      instr_sw[rga.nwp]=rga.ex 
+	      instr_sw[rga.nwp]=rga.ex    and
+          instr_sw[rga.ex]=none  
 }
 
 fact{all cas:CasF | // sx->nf->nrwpq->nwp
           instr_sw[cas.sx] = cas.nf and
           instr_sw[cas.nf] = cas.nrwpq and
           instr_sw[cas.nrwpq] = cas.nwp and
-	      instr_sw[cas.nwp]=cas.ex 
+	      instr_sw[cas.nwp]=cas.ex   and
+          instr_sw[cas.ex]=none  
 }
 
 //-------------

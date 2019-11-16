@@ -18,20 +18,36 @@ abstract sig LocalCPUaction extends Action{
     po: lone LocalCPUaction // for displaying po.	
 }
 
-sig Writer in Action {// extends <--> in??
-    wl: one MemoryLocation,
-    wV: one Int
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
 }
 
+sig Reader in MemoryAction {
+	rV: one Int,
+	corf: one Writer
+}
+
+
+sig Writer in MemoryAction {
+	wV: one Int,
+	rf: set Reader
+}
+
+fact{~rf=corf}
+
+sig Init extends W{}
+
+/*CPU write*/
 sig W extends LocalCPUaction{}
-fact {all w:W| w in Writer}
-sig Init extends W { }
+fact {all w:W| w in Writer and not(w in Reader)}
 
 // assign some initial value
 fact { all w:W | w.wV = 4 }
 
 // there is at least one write to each memory location
-fact { all ml:MemoryLocation | some w:W | w.wl = ml }
+fact { all ml:MemoryLocation | some w:W | w.loc = ml }
 
 // writer succeeds initial value
 fact { all iv : Init | one aw:W | aw in po[iv] }

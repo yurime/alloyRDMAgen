@@ -21,19 +21,12 @@ pred remoteMachineAction [a:Action] { not host[o[a]]=host[d[a]] }
 pred localMachineAction [a:Action] { host[o[a]]=host[d[a]] }
 pred sameOandD [a,b:Action] {o[a]=o[b] and  d[a]=d[b] }
 
-fact {po_tc=^po_tc}
-fact {po_tc=~copo}
-fact{not cyclic[po_tc]}
-fact{all a,b:Action| b in a.po iff ((b in a.po_tc) and #(a.po_tc - b.po_tc)=1)} // for displaying po. 
-fact {all a: LocalCPUaction| localMachineAction[a]}
-fact {all disj a,b: LocalCPUaction| 
-                                      (o[a] = o[b])
-                                      iff
-                                      (
-                                        (a in b.po_tc) or
-                                        (a in b.copo) 
-                                      )
+fact{po_tc=^po_tc
+         and(po_tc=~copo) // for displaying po. 
+        and(po=po_tc-po_tc.po_tc)
+		and not cyclic[po_tc]
 }
+
 
 
 sig MemoryAction in Action{
@@ -65,42 +58,69 @@ fact {all w:W| w in Writer and not(w in Reader)}
 fact {all a:W| not(a in RDMAaction)}
 
 
+sig nEx extends nA {
+   // poll_cq_sw: lone poll_cq
+}
+fact {all a:nEx| not(a in Writer) and not (a in Reader)
+                       and remoteMachineAction[a]}
+
+
 sig RDMAaction in Action {
+	instr : one Instruction,
+	instr_sw: lone nA,
     sw : set Action
 }
 
+fact{all a:RDMAaction|
+    remoteMachineAction[a] => (sameOandD[a,a.instr.sx]
+                                             and sameOandD[a,a.instr.ex])
+}
+fact {all a:RDMAaction| all i: Instruction | instr[a] = i iff a in i.actions}
+
 /* RDMA instructions and the actions that compose them*/
 abstract sig Instruction {
-  actions: set Action
+	actions: set RDMAaction,
+    sx:one Sx,
+    ex:one nEx
 }{
-  all disj a1,a2:actions | o[a1]=o[a2]
+  (one o[actions])
+  and (ex in actions) 
+  and (sx in actions) 
 }
 
-
-
-fact {all a: Sx| all i: Instruction | instr[a] = i iff a in i.actions}
-fact {all a: nA| all i: Instruction | instr[a] = i iff a in i.actions}
-
-abstract sig Sx extends LocalCPUaction{
-  instr: one Instruction,
-  instr_sw: one nA
+abstract sig NFInstruction extends Instruction{}{
+  #actions = 4
 }
-fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
-fact {all sx: Sx| (sx in RDMAaction)}
+abstract sig FInstruction extends Instruction{
+    nf:one nF
+}{
+(nf in actions) and
+(#actions = 5)
+}
 
-sig Sx_put extends Sx {}
+/* start NIC action (start external)*/
+sig Sx extends LocalCPUaction{}
 
-fact { all l: LocalCPUaction| o[l] = d[l]}
+fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)
+		and (sx in RDMAaction)
+		and remoteMachineAction[sx]
+}
+
 
 /*NIC action*/
 abstract sig nA extends Action{
-	instr : one Instruction,
-	instr_sw: lone nA,
-    nic_ord_sw: set nA//,
-//    poll_cq_sw: lone poll_cq
+    nic_ord_sw: set nA,
+    nic_ord_sw_s: set nA,
+ //   poll_cq_sw_s: lone poll_cq,
+	ipo: set nA
 }
 fact {all a:nA| (a in RDMAaction)}
-
+fact {all disj a1,a2:nA| 
+			(a2 in a1.ipo) iff (
+				(a2.instr.sx) 
+                       in (a1.instr.sx.po_tc)
+			)
+}
 
 /*NIC Read*/
 abstract sig nR extends nA{}
@@ -136,16 +156,15 @@ fact {all a: nF| localMachineAction[a]}
 /* Remote Put statement */
 /* =============== */
 
-sig Put extends Instruction {}{ 
-  #actions = 3 and 
-  #(actions & Sx_put) = 1 and 
-  #(actions & nRp) = 1 and 
-  #(actions & nWpq) = 1    and 
-  (let nrp=actions & nRp,
-      nwpq=actions & nWpq{
-       rV[nrp] = wV[nwpq]
-   })
+
+sig Put extends NFInstruction {
+	nrp: one nRp,
+	nwpq: one nWpq
+}{  
+  (nrp in actions) and 
+  (nwpq in actions)
 }
+
 //-------------
 /**nic-ord-sw**/
 //-----------
@@ -153,28 +172,29 @@ sig Put extends Instruction {}{
 fact{all a:nA | not a in nic_ord_sw[a]}
 
 // predicates to define when nic_ord_sw is legal
+fact{all put:Put | // sx->nrp->nwpq
+          instr_sw[put.sx] = put.nrp and
+          instr_sw[put.nrp] = put.nwpq and
+		  instr_sw[put.nwpq]=put.ex   and
+          instr_sw[put.ex]=none  
+}
+
+
+// predicates to define when nic_ord_sw is legal
 pred putOrRDMAatomic [na1:nA,na2:nA] {
-  let sx1=actions[instr[na1]]&Sx,
-       sx2=actions[instr[na2]]&Sx {
-           (sameOandD[na1,na2]) and//forcing same queuepair and starting thread
-           (sx2 in sx1.po_tc)  and 
+           (na2 in na1.ipo) and//forcing same queuepair and starting thread
   	       (remoteMachineAction[na1]) and   // sx1----->nWpq
 	       (remoteMachineAction[na2]) and   // ↓po         ↓nic_ord_sw
-	       (not na1 in nRpq)                // sx2----->na2 
-  }//end of let 
+	       (not na1 in nRpq)                         // sx2----->na2 
 }
 
 pred putLocalPart [na1:nA,na2:nA]{
-  let sx1=actions[instr[na1]]&Sx,
-       sx2=actions[instr[na2]]&Sx,
-       na1r=actions[instr[na1]]&nWpq,
-       na2r=actions[instr[na2]]&nWpq      { 
-           (sameOandD[na1r,na2r]) and//forcing same queuepair and starting thread
-           (sx2 in sx1.po_tc)  and                           // sx1----->nRp
-	       instr[na1]+instr[na2] in Put/*+PutF*/ and  // ↓po         ↓nic_ord_sw
-	      (na2+na1 in nRp)                                     // sx2----->nRp 
-  }//end of let 
+           (na2 in na1.ipo) and//forcing same queuepair and starting thread
+	      (na2+na1 in nRp)		// sx1----->nRp
+											// ↓po         ↓nic_ord_sw
+									        // sx2----->nRp 
 }
+
 
 // (na1,na2) in nic_ord_sw definition (3 cases)
 fact{all disj na1,na2:nA |
@@ -191,15 +211,6 @@ fact{all disj na1,na2:nA |
 //-----------
 /**instr-sw**/
 //-----------
-fact{all put:Put | // sx->nrp->nwpq
-  let sx=actions[put] & Sx_put, 
-      nrp=actions[put] & nRp,
-      nwpq=actions[put] & nWpq{
-          instr_sw[sx] = nrp and
-          instr_sw[nrp] = nwpq and
-       #(instr_sw[nwpq])=0
-     }
-}
 
 
 
@@ -234,9 +245,9 @@ fact { all w:Writer | w.wV = 4 }
 fact { some x, y : Action | not (x.o = y.o) }
 
 fact {#(Node)=2 and #(Thr)=2
-        and #(Sx_put & Sx_put.po_tc) =1}
+        and #(Put.sx & Put.sx.po_tc) =1}
 
 pred show {}
 
 
-run show for 7
+run show for 10

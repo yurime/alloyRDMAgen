@@ -21,20 +21,12 @@ abstract sig LocalCPUaction extends Action{
 	copo : set LocalCPUaction
 }
 //--- Local CPUAction Rules
-fact {po_tc=^po_tc}
-fact {po_tc=~copo}
-fact{not cyclic[po_tc]}
-fact{all a,b:Action| b in a.po iff ((b in a.po_tc) and #(a.po_tc - b.po_tc)=1)} // for displaying po. 
-fact {all a: LocalCPUaction| localMachineAction[a]}
-fact {all disj a,b: LocalCPUaction| 
-                                      (o[a] = o[b])
-                                      iff
-                                      (
-                                        (a in b.po_tc) or
-                                        (a in b.copo) 
-                                      )
-}
 
+fact{po_tc=^po_tc
+         and(po_tc=~copo) // for displaying po. 
+        and(po=po_tc-po_tc.po_tc)
+		and not cyclic[po_tc]
+}
 
 sig Reader in MemoryAction {
 	rV: one Int,
@@ -59,38 +51,39 @@ fact{all w:Writer, r:rf[w] | loc[r]=loc[w] and rV[r]=wV[w]}
 
 
 sig RDMAaction in Action {
+	instr : one Instruction,
+	instr_sw: lone nA,
     sw : set Action
 }
-
 /* RDMA instructions and the actions that compose them*/
-abstract sig Instruction {
-	actions: set Action
-}{
-  all disj a1,a2:actions | o[a1]=o[a2]
+
+fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)
+		and (sx in RDMAaction)
+		and remoteMachineAction[sx]
 }
 
 
-abstract sig Sx extends LocalCPUaction{
-	instr: one Instruction,
-	instr_sw: one nA
+sig nEx extends nA {
+    //poll_cq_sw: lone poll_cq
 }
-fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
-fact {all sx: Sx| (sx in RDMAaction)}
 
-
-sig Sx_rga extends Sx {}
-
-fact { all l: LocalCPUaction| o[l] = d[l]}
+fact {all a:nEx| not(a in Writer) and not (a in Reader)
+                       and remoteMachineAction[a]}
 
 /*NIC action*/
 abstract sig nA extends Action{
-	instr: one Instruction,
-    instr_sw: lone nA, 
-    nic_ord_sw: set nA
+    nic_ord_sw: set nA,
+    nic_ord_sw_s: set nA,
+ //   poll_cq_sw_s: lone poll_cq,
+	ipo: set nA
 }
 fact {all a:nA| (a in RDMAaction)}
-
-
+fact {all a1,a2:nA| 
+			(a2 in a1.ipo) iff (
+				(a2.instr.sx) 
+                       in (a1.instr.sx.po_tc)
+			)
+}
 /*NIC Write*/
 abstract sig nW extends nA{}
 fact {all w:nW| w in Writer and not(w in Reader)}
@@ -107,25 +100,18 @@ fact { all a: nWp| localMachineAction[a]}
 
 /* construction of sw */
 
-fact{all a:Sx |
-	a.sw = a.instr_sw
-}
+sig Sx extends LocalCPUaction{}
 
 fact{all a:nA |
 	a.sw = a.nic_ord_sw+a.instr_sw//+a.poll_cq_sw
 }
 //small optimization
 fact{all a:nA | a.nic_ord_sw=none }
-
-sig nEx extends nA {
-    poll_cq_sw: lone poll_cq
-}
-fact {all a:nEx| not(a in Writer) and not (a in Reader)
-                       and remoteMachineAction[a]}
-                       
+                      
 //-----------
 /**instr-sw**/
 //-----------
+/* RDMA instructions and the actions that compose them*/
 abstract sig Instruction {
 	actions: set RDMAaction,
     sx:one Sx,
@@ -155,16 +141,13 @@ sig Rga extends NFInstruction {
 /**instr-sw**/
 //-----------
 
-fact{all rga:Rga | // sx->nrwpq->nwp
-  let sx=actions[rga] & Sx_rga, 
-      nrwpq=actions[rga] & nRWpq,
-      nwp=actions[rga] & nWp{
-          instr_sw[sx] = nrwpq and
-          instr_sw[nrwpq] = nwp and
-		   #(instr_sw[nwp])=0
-     }
-}
 
+fact{all rga:Rga | // sx->nrwpq->nwp
+          instr_sw[rga.sx] = rga.nrwpq and
+          instr_sw[rga.nrwpq] = rga.nwp and
+		  instr_sw[rga.nwp]=rga.ex    and
+          instr_sw[rga.ex]=none  
+}
 
 sig W extends LocalCPUaction{}
 fact {all w:W| w in Writer and not(w in Reader)}

@@ -71,6 +71,7 @@ abstract sig LocalCPUaction extends Action{
 fact{po_tc=^po_tc
          and(po_tc=~copo) // for displaying po. 
         and(po=po_tc-po_tc.po_tc)
+		and not cyclic[po_tc]
 }
 
 /* start NIC action (start external)*/

@@ -1,14 +1,44 @@
 open util/integer
+
+/* Machine with one or more Threads */
 sig Node {}
 
-sig Thr { 
-  host: one Node // host node
+/* Thread */
+sig Thr {
+	host: one Node // host node
 }
-sig MemoryLocation { host: one Node }
 
-abstract sig Action {
-    o, d: one Thr
+/* Shared Variables */
+sig MemoryLocation {
+  host: one Node
 }
+abstract sig Action {
+	/* destination and origin thread of the action */	
+	d, o : one Thr
+}
+
+pred cyclic [rel:Action->Action] {some a:Action | a in ^rel[a]}
+pred sameOandD [a,b:Action] {o[a]=o[b] and  d[a]=d[b] }
+pred remoteMachineAction [a:Action] { not host[o[a]]=host[d[a]] }
+pred localMachineAction [a:Action] { host[o[a]]=host[d[a]] }
+
+sig MemoryAction in Action{
+	loc: one MemoryLocation
+}{
+	loc.host=d.host
+}
+
+sig Reader in MemoryAction {
+	rV: one Int,
+	corf: one Writer
+}
+sig Writer in MemoryAction {
+	wV: one Int,
+	rf: set Reader
+}
+
+sig Init extends W{}
+
 abstract sig LocalCPUaction extends Action{
   /* program order */
   po_tc : set LocalCPUaction,
@@ -16,68 +46,62 @@ abstract sig LocalCPUaction extends Action{
   copo : set LocalCPUaction
 }
 
-pred cyclic [rel:Action->Action] {some a:Action | a in ^rel[a]}
-pred remoteMachineAction [a:Action] { not host[o[a]]=host[d[a]] }
-pred localMachineAction [a:Action] { host[o[a]]=host[d[a]] }
-
-fact {po_tc=^po_tc}
-fact {po_tc=~copo}
-fact{not cyclic[po_tc]}
-fact{all a,b:Action| b in a.po iff ((b in a.po_tc) and #(a.po_tc - b.po_tc)=1)} // for displaying po. 
-fact {all a: LocalCPUaction| o[a] = d[a]}
-fact {all disj a,b: LocalCPUaction| 
-                                      (o[a] = o[b])
-                                      iff
-                                      (
-                                        (a in b.po_tc) or
-                                        (a in b.copo) 
-                                      )
+fact{po_tc=^po_tc
+         and(po_tc=~copo) // for displaying po. 
+        and(po=po_tc-po_tc.po_tc)
 }
 
-sig Writer in Action {
-  wl: one MemoryLocation,
-  wV: one Int,
-  rf: set Reader
-}
-
-fact{~rf=corf}
-
-/* RDMA instructions and the actions that compose them*/
-abstract sig Instruction {
-  actions: set Action
-}{
-  all disj a1,a2:actions | o[a1]=o[a2]
-}
-
-
-abstract sig Sx extends LocalCPUaction{
-  instr: one Instruction,
-  instr_sw: one nA
-}
-fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
-fact {all sx: Sx| (sx in RDMAaction)}
-
-
-sig Sx_cas extends Sx {}
 
 sig RDMAaction in Action {
+	instr : one Instruction,
+	instr_sw: lone nA,
     sw : set Action
 }
 
-fact { all l: LocalCPUaction| o[l] = d[l]}
+
+
+/* start NIC action (start external)*/
+sig Sx extends LocalCPUaction{}
+
+fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)
+		and (sx in RDMAaction)
+		and remoteMachineAction[sx]
+}
+
+/*CPU write*/
+sig W extends LocalCPUaction{}
+fact {all w:W| w in Writer and not(w in Reader)
+				and not(w in RDMAaction)
+				and localMachineAction[w]}
+
 
 /*NIC action*/
 abstract sig nA extends Action{
-  instr: one Instruction,
-    instr_sw: lone nA, 
-    nic_ord_sw: set nA
+    nic_ord_sw: set nA,
+	ipo: set nA
 }
 fact {all a:nA| (a in RDMAaction)}
+fact {all a1,a2:nA| 
+			(a2 in a1.ipo) iff (
+				(a2.instr.sx) 
+                       in (a1.instr.sx.po_tc)
+			)
+}
+
+
+
+/*NIC Read*/
+abstract sig nR extends nA{}
+fact {all r:nR| r in Reader and not(r in Writer)}
 
 
 /*NIC Write*/
 abstract sig nW extends nA{}
 fact {all w:nW| w in Writer and not(w in Reader)}
+
+/*NIC local write*/
+sig nWp extends nW{}
+fact { all a: nWp| localMachineAction[a]}
 
 /*NIC read-write*/
 sig nRWpq extends nA{}
@@ -90,36 +114,45 @@ fact {all f:nF| not(f in Writer) and not (f in Reader)}
 fact {all a: nF| localMachineAction[a]}
 
 
-/*NIC local write*/
-sig nWp extends nW{}
-fact { all a: nWp| o[a] = d[a]}
+sig nEx extends nA {
+}
+fact {all a:nEx| not(a in Writer) and not (a in Reader)
+                       and remoteMachineAction[a]}
 
-
-sig Reader in Action {
-  rl: one MemoryLocation,
-  rV: one Int,
-  corf: one Writer
+/* RDMA instructions and the actions that compose them*/
+abstract sig Instruction {
+	actions: set RDMAaction,
+    sx:one Sx,
+    ex:one nEx
+}{
+  (one o[actions])
+  and (ex in actions) 
+  and (sx in actions) 
 }
 
+fact{all a:RDMAaction|
+    remoteMachineAction[a] => (sameOandD[a,a.instr.sx]
+                                             and sameOandD[a,a.instr.ex])
+}
+fact {all a:RDMAaction| all i: Instruction | instr[a] = i iff a in i.actions}
 
-// read/write from the same machine as the action destination
-fact{all r:Reader | host[rl[r]]=host[d[r]] }
-fact{all w:Writer | host[wl[w]]=host[d[w]] }
+abstract sig FInstruction extends Instruction{
+    nf:one nF
+}{
+(nf in actions) and
+(#actions = 5)
+}
 
 
 /* =============== */
 /* Remote Cas Instruction */
 /* =============== */
-sig CasF extends Instruction {}{
-  #actions = 4 and 
-  #(actions & Sx_cas) = 1 and
-  #(actions & nF) = 1 and   
-  #(actions & nRWpq) = 1 and 
-  #(actions & nWp) = 1  and 
-  (let nrwpq=actions & nRWpq,
-      nwp=actions & nWp{
-       rV[nrwpq] = wV[nwp]
-   })
+sig CasF extends FInstruction {
+	nrwpq: one nRWpq,
+	nwp: one nWp
+}{
+  (nrwpq in actions) and 
+  (nwp in actions)
 }
 
 
@@ -140,35 +173,22 @@ fact{all a:nA | a.nic_ord_sw=none }
 //-----------
 /**instr-sw**/
 //-----------
-
 fact{all cas:CasF | // sx->nf->nrwpq->nwp
-  let sx=actions[cas] & Sx_cas, 
-      nrwpq=actions[cas] & nRWpq,
-      nf=actions[cas] & nF,
-      nwp=actions[cas] & nWp{
-          instr_sw[sx] = nf and
-          instr_sw[nf] = nrwpq and
-          instr_sw[nrwpq] = nwp and
-       #(instr_sw[nwp])=0
-     }
+          instr_sw[cas.sx] = cas.nf and
+          instr_sw[cas.nf] = cas.nrwpq and
+          instr_sw[cas.nrwpq] = cas.nwp and
+	      instr_sw[cas.nwp]=cas.ex 
 }
 
 
-
-sig W extends LocalCPUaction{}
-fact {all w:W| w in Writer and not(w in Reader)}
-fact {all a:W| not(a in RDMAaction)}
-
-sig Init extends W{}
-
 // All memory locations must be initialized
-fact{Init.wl=MemoryLocation}
+fact{Init.loc=MemoryLocation}
 
 // Init or a sequence of it is the first instruction
 fact{Init.~po_tc in Init}
 
 // one Init per one location
-fact  {all disj i1,i2:Init| not wl[i1]=wl[i2]}
+fact  {all disj i1,i2:Init| not loc[i1]=loc[i2]}
 
 
 

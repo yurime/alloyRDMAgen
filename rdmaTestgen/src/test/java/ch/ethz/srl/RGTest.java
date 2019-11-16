@@ -36,7 +36,7 @@ public class RGTest {
                         a = a.getSuccs().get(0);
                         i_count++;
                     }
-                    assertEquals(2, i_count);
+                    assertEquals(1, i_count);
                 }
                 for (TGAction a : tag.getTails()) {
                     int i_count = 1;
@@ -44,7 +44,7 @@ public class RGTest {
                         a = a.getPreds().get(0);
                         i_count++;
                     }
-                    assertEquals(2, i_count);
+                    assertEquals(1, i_count);
                 }
                 
                 for (TGRDMAaction a : swtag.getHeads()) {
@@ -53,7 +53,7 @@ public class RGTest {
                         a = a.getSwSuccs().get(0);
                         a_count++;
                     }
-                    assertEquals(3, a_count);
+                    assertEquals(4, a_count);
                 }
 
                 for (TGRDMAaction a : swtag.getTails()) {
@@ -62,7 +62,7 @@ public class RGTest {
                         a = a.getSwPreds().get(0);
                         a_count++;
                     }
-                    assertEquals(3, a_count);
+                    assertEquals(4, a_count);
                 }
             }
         }
@@ -95,7 +95,7 @@ public class RGTest {
                         a = a.getSuccs().get(0);
                         i_count++;
                     }
-                    assertEquals(2, i_count);
+                    assertEquals(1, i_count);
                 }
                 for (TGAction a : tag.getTails()) {
                     int i_count = 1;
@@ -103,7 +103,7 @@ public class RGTest {
                         a = a.getPreds().get(0);
                         i_count++;
                     }
-                    assertEquals(2, i_count);
+                    assertEquals(1, i_count);
                 }
                 
                 for (TGRDMAaction a : swtag.getHeads()) {
@@ -112,7 +112,7 @@ public class RGTest {
                         a = a.getSwSuccs().get(0);
                         a_count++;
                     }
-                    assertEquals(4, a_count);
+                    assertEquals(5, a_count);
                 }
 
                 for (TGRDMAaction a : swtag.getTails()) {
@@ -121,7 +121,7 @@ public class RGTest {
                         a = a.getSwPreds().get(0);
                         a_count++;
                     }
-                    assertEquals(4, a_count);
+                    assertEquals(5, a_count);
                 }
             }
         }

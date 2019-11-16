@@ -183,7 +183,7 @@ abstract class TGInstruction extends TGActionImpl {
 		assert second_nic_act.getSwPreds().size() >= 1 && second_nic_act.getSwPreds().contains(first_nic_act);
 		assert first_nic_act.getSwPreds().size() >= 1 && first_nic_act.getSwPreds().contains(nf);
 		assert nf.getSwPreds().size() >= 1 && nf.getSwPreds().contains(sx);
-		assert second_nic_act.getSwPreds().size() >= 1 && second_nic_act.getSwPreds().contains(ex);
+		assert second_nic_act.getSwPreds().size() >= 1 && second_nic_act.getSwPreds().contains(first_nic_act);
 		assert actionToThread.get(sx) != null;
 		assert actionToThread.get(second_nic_act) !=null;
 		assert actionToThread.get(first_nic_act) !=null;
@@ -379,6 +379,7 @@ class TGRemotePut extends TGInstruction {
                 rpActions.add(ex);
             }else if (a instanceof TGSX) {
                 sx = (TGSX)a;
+                rpActions.add(sx);
             }
         }
 
@@ -452,6 +453,7 @@ class TGRemoteGet extends TGInstruction {
                 rgActions.add(ex);
             }else if (a instanceof TGSX) {
                 sx = (TGSX)a;
+                rgActions.add(sx);
             }
         }
 
@@ -510,6 +512,7 @@ class TGRemoteCompareAndSwap extends TGInstruction {
         for (TGAction a : actions) {
         	if (a instanceof TGSX) {
                 sx = (TGSX)a;
+                rcasActions.add(sx);
             } else if (a instanceof TGEX) {
                 ex = (TGEX)a;
                 rcasActions.add(ex);
@@ -578,6 +581,7 @@ class TGRemoteGetAccumulate extends TGInstruction {
         for (TGAction a : actions) {
         	if (a instanceof TGSX) {
                 sx = (TGSX)a;
+                rgaActions.add(sx);
             } else if (a instanceof TGEX) {
                 ex = (TGEX)a;
                 rgaActions.add(ex);
@@ -643,6 +647,7 @@ class TGFencedRemoteGet extends TGInstruction {
         for (TGAction a : actions) {
         	if (a instanceof TGSX) {
                 sx = (TGSX)a;
+                rgActions.add(sx);
             }else if (a instanceof TGEX) {
                 ex = (TGEX)a;
                 rgActions.add(ex);
@@ -732,10 +737,11 @@ class TGFencedRemotePut extends TGInstruction {
                 rpActions.add(ex);
             }else if (a instanceof TGSX) {
                 sx = (TGSX)a;
+                rpActions.add(sx);
             }
         }
 
-        if (rw == null || er == null || sx == null|| nf == null&& ex != null) throw new RuntimeException("Error constructing TGFencedRemotePut: rr or ew or sx are null");
+        if (rw == null || er == null || sx == null|| nf == null&& ex == null) throw new RuntimeException("Error constructing TGFencedRemotePut: rr or ew or sx are null");
 
         //assert rw.getD() == er.getD();// TODO: not clear to me. Only the origin is equal for my model, should Action::getO() be added? maybe ew is p and in the other model p->q
 
@@ -798,6 +804,7 @@ class TGFencedRemoteCompareAndSwap extends TGInstruction {
         for (TGAction a : actions) {
         	if (a instanceof TGSX) {
                 sx = (TGSX)a;
+        		rcasfActions.add(sx);
             } else if (a instanceof TGEX) {
                 ex = (TGEX)a;
                 rcasfActions.add(ex);

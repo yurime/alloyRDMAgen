@@ -80,19 +80,13 @@ abstract sig LocalCPUaction extends Action{
     po: lone LocalCPUaction, // for displaying po.
 	copo : set LocalCPUaction
 }
-fact {po_tc=^po_tc}
-fact {po_tc=~copo}
-fact{not cyclic[po_tc]}
-fact{all a,b:Action| b in a.po iff ((b in a.po_tc) and #(a.po_tc - b.po_tc)=1)} // for displaying po. 
-fact {all a: LocalCPUaction| o[a] = d[a]}
-fact {all disj a,b: LocalCPUaction| 
-                                      (o[a] = o[b])
-                                      iff
-                                      (
-                                        (a in b.po_tc) or
-                                        (a in b.copo) 
-                                      )
+
+fact{po_tc=^po_tc
+         and(po_tc=~copo) // for displaying po. 
+        and(po=po_tc-po_tc.po_tc)
+		and not cyclic[po_tc]
 }
+
 
 
 /*CPU read*/
@@ -213,4 +207,4 @@ fact { #MemoryLocation = 2 and #Thr = 2 and #Init >= 2 and #Put= 1}
 
 pred show {}
 
-run show for 6
+run show for 7

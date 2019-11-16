@@ -1,6 +1,7 @@
 open util/integer
 
 pred cyclic [rel:Action->Action] {some a:Action | a in ^rel[a]}
+pred localMachineAction [a:Action] { host[o[a]]=host[d[a]] }
 
 /* Machine with one or more Threads */
 sig Node {}
@@ -21,22 +22,25 @@ abstract sig Action {
 	d, o : one Thr
 }
 
-sig MemoryAction extends Action{
+sig MemoryAction in Action{
 	loc: one MemoryLocation
 }{
 	loc.host=d.host
 }
 
-sig Writer extends MemoryAction {
-	wV: one Int,
-	rf: set Reader
-}
 
-sig Reader extends MemoryAction {
+sig Reader in MemoryAction {
 	rV: one Int,
 	corf: one Writer
 }
 
+
+sig Writer in MemoryAction {
+	wV: one Int,
+	rf: set Reader
+}
+
+fact{~rf=corf}
 abstract sig LocalCPUaction extends Action{
 	/* program order */
 	po_tc : set LocalCPUaction,
@@ -52,23 +56,16 @@ fact {all w:W| w in Writer and not(w in Reader)}
 sig R extends LocalCPUaction{
    // reg : one Register
 }
-fact {po_tc=^po_tc}
-fact {po_tc=~copo}
-fact{not cyclic[po_tc]}
-fact{all a,b:Action| b in a.po iff ((b in a.po_tc) and #(a.po_tc - b.po_tc)=1)} // for displaying po. 
-fact {all a: LocalCPUaction| o[a] = d[a]}
-fact {all disj a,b: LocalCPUaction| 
-                                      (o[a] = o[b])
-                                      iff
-                                      (
-                                        (a in b.po_tc) or
-                                        (a in b.copo) 
-                                      )
+fact{po_tc=^po_tc
+         and(po_tc=~copo) // for displaying po. 
+        and(po=po_tc-po_tc.po_tc)
+		and not cyclic[po_tc]
 }
 
 
-fact {all r:R| r in Reader and not(r in Writer)}
-
+fact {all r:R| r in Reader and not(r in Writer)
+	//			and not(r in RDMAaction)
+				and localMachineAction[r]}
 
 sig Init extends W{}
 

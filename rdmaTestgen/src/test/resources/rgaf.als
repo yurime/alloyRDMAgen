@@ -21,18 +21,11 @@ abstract sig LocalCPUaction extends Action{
 	copo : set LocalCPUaction
 }
 //--- Local CPUAction Rules
-fact {po_tc=^po_tc}
-fact {po_tc=~copo}
-fact{not cyclic[po_tc]}
-fact{all a,b:Action| b in a.po iff ((b in a.po_tc) and #(a.po_tc - b.po_tc)=1)} // for displaying po. 
-fact {all a: LocalCPUaction| localMachineAction[a]}
-fact {all disj a,b: LocalCPUaction| 
-                                      (o[a] = o[b])
-                                      iff
-                                      (
-                                        (a in b.po_tc) or
-                                        (a in b.copo) 
-                                      )
+
+fact{po_tc=^po_tc
+         and(po_tc=~copo) // for displaying po. 
+        and(po=po_tc-po_tc.po_tc)
+		and not cyclic[po_tc]
 }
 
 
@@ -59,37 +52,55 @@ fact{~rf=corf}
 fact{all w:Writer, r:rf[w] | loc[r]=loc[w] and rV[r]=wV[w]}
 
 sig RDMAaction in Action {
+	instr : one Instruction,
+	instr_sw: lone nA,
     sw : set Action
 }
-
 /* RDMA instructions and the actions that compose them*/
 abstract sig Instruction {
-	actions: set Action
+	actions: set RDMAaction,
+    sx:one Sx,
+    ex:one nEx
 }{
-  all disj a1,a2:actions | o[a1]=o[a2]
+  (one o[actions])
+  and (ex in actions) 
+  and (sx in actions) 
 }
 
 
-abstract sig Sx extends LocalCPUaction{
-	instr: one Instruction,
-	instr_sw: one nA
+abstract sig NFInstruction extends Instruction{}{
+  #actions = 4
 }
+abstract sig FInstruction extends Instruction{
+    nf:one nF
+}{
+(nf in actions) and
+(#actions = 5)
+}
+
+sig Sx extends LocalCPUaction{}
 fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
 fact {all sx: Sx| (sx in RDMAaction)}
 
 
-sig Sx_rga extends Sx {}
 
-fact { all l: LocalCPUaction| o[l] = d[l]}
+
+sig nEx extends nA {
+ //   poll_cq_sw: lone poll_cq
+}
 
 /*NIC action*/
 abstract sig nA extends Action{
-	instr: one Instruction,
-    instr_sw: lone nA, 
-    nic_ord_sw: set nA
+    nic_ord_sw: set nA,
+	ipo: set nA
 }
 fact {all a:nA| (a in RDMAaction)}
-
+fact {all a1,a2:nA| 
+			(a2 in a1.ipo) iff (
+				(a2.instr.sx) 
+                       in (a1.instr.sx.po_tc)
+			)
+}
 
 /*RDMA Fence*/
 sig nF extends nA {}
@@ -123,35 +134,26 @@ fact{all a:nA |
 //small optimization
 fact{all a:nA | a.nic_ord_sw=none }
 
-sig RgaF extends Instruction {}{
-  #actions = 4 and 
-  #(actions & Sx_rga) = 1 and 
-  #(actions & nF) = 1 and  
-  #(actions & nRWpq) = 1 and 
-  #(actions & nWp) = 1   and 
-  (let nrwpq=actions & nRWpq,
-      nwp=actions & nWp{
-       rV[nrwpq] = wV[nwp]
-   })
-}
 
+sig RgaF extends FInstruction {
+	nrwpq: one nRWpq,
+	nwp: one nWp
+}{
+  (nrwpq in actions) and 
+  (nwp in actions)
+}
 //-----------
 
 //-----------
 /**instr-sw**/
 //-----------
 
-
 fact{all rga:RgaF | // sx->nf->nrwpq->nwp
-  let sx=actions[rga] & Sx_rga, 
-      nrwpq=actions[rga] & nRWpq,
-      nf=actions[rga] & nF,
-      nwp=actions[rga] & nWp{
-          instr_sw[sx] = nf and
-          instr_sw[nf] = nrwpq and
-          instr_sw[nrwpq] = nwp and
-		   #(instr_sw[nwp])=0
-     }
+          instr_sw[rga.sx] =rga.nf and
+          instr_sw[rga.nf] = rga.nrwpq and
+          instr_sw[rga.nrwpq] = rga.nwp and
+	      instr_sw[rga.nwp]=rga.ex    and
+          instr_sw[rga.ex]=none  
 }
 
 
