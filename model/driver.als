@@ -2,6 +2,9 @@ open base_sw_rules as b
 open rdma_execution as e
 /** General test requirement or optimizations**/
 
+//for now one thread per node
+fact{all n:Node| one ~(Thr<:host)[n]}
+
 // eliminate unused nodes 
 fact {Node = host[Thr]}
 
