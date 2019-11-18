@@ -65,7 +65,7 @@ public class TranslateValue {
             result.append("disj " + actionEx.toString() + ":  nEx,\n");
         }
         if (actionNf.length() > 0) {
-            result.append("disj " + actionSx.toString() + ":  nF,\n");
+            result.append("disj " + actionNf.toString() + ":  nF,\n");
         }
         if (actionRp.length() > 0) {
             result.append("disj " + actionRp.toString() + ":  nRp,\n");

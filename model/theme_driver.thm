@@ -12,6 +12,7 @@
 <node>
    <type name="Int"/>
    <type name="String"/>
+   <type name="Univ"/>
    <type name="univ"/>
    <type name="d/Dummy"/>
    <type name="seq/Int"/>
@@ -54,7 +55,6 @@
    <type name="d/e/sw/a/Thr"/>
    <type name="d/e/sw/a/U"/>
    <type name="d/e/sw/a/W"/>
-   <set name="this/Witness2" type="d/e/sw/a/R"/>
    <set name="Consistent" type="d/b/e/Boolean"/>
    <set name="d/b/nA_prime" type="d/e/sw/a/nA"/>
    <set name="d/b/RDMAaction_prime" type="d/e/sw/a/Action"/>
@@ -92,6 +92,22 @@
    <relation name="host"> <type name="d/e/sw/a/Thr"/> <type name="d/e/sw/a/Node"/> </relation>
    <relation name="instr"> <type name="d/e/sw/a/Action"/> <type name="d/e/sw/a/Instruction"/> </relation>
    <relation name="loc"> <type name="d/e/sw/a/Action"/> <type name="d/e/sw/a/MemoryLocation"/> </relation>
+   <relation name="nrp"> <type name="d/e/sw/a/Put"/> <type name="d/e/sw/a/nRp"/> </relation>
+   <relation name="nrp"> <type name="d/e/sw/a/PutF"/> <type name="d/e/sw/a/nRp"/> </relation>
+   <relation name="nrpq"> <type name="d/e/sw/a/Get"/> <type name="d/e/sw/a/nRpq"/> </relation>
+   <relation name="nrpq"> <type name="d/e/sw/a/GetF"/> <type name="d/e/sw/a/nRpq"/> </relation>
+   <relation name="nrwpq"> <type name="d/e/sw/a/Cas"/> <type name="d/e/sw/a/nRWpq"/> </relation>
+   <relation name="nrwpq"> <type name="d/e/sw/a/CasF"/> <type name="d/e/sw/a/nRWpq"/> </relation>
+   <relation name="nrwpq"> <type name="d/e/sw/a/Rga"/> <type name="d/e/sw/a/nRWpq"/> </relation>
+   <relation name="nrwpq"> <type name="d/e/sw/a/RgaF"/> <type name="d/e/sw/a/nRWpq"/> </relation>
+   <relation name="nwp"> <type name="d/e/sw/a/Cas"/> <type name="d/e/sw/a/nWp"/> </relation>
+   <relation name="nwp"> <type name="d/e/sw/a/CasF"/> <type name="d/e/sw/a/nWp"/> </relation>
+   <relation name="nwp"> <type name="d/e/sw/a/Get"/> <type name="d/e/sw/a/nWp"/> </relation>
+   <relation name="nwp"> <type name="d/e/sw/a/GetF"/> <type name="d/e/sw/a/nWp"/> </relation>
+   <relation name="nwp"> <type name="d/e/sw/a/Rga"/> <type name="d/e/sw/a/nWp"/> </relation>
+   <relation name="nwp"> <type name="d/e/sw/a/RgaF"/> <type name="d/e/sw/a/nWp"/> </relation>
+   <relation name="nwpq"> <type name="d/e/sw/a/Put"/> <type name="d/e/sw/a/nWpq"/> </relation>
+   <relation name="nwpq"> <type name="d/e/sw/a/PutF"/> <type name="d/e/sw/a/nWpq"/> </relation>
    <relation name="o"> <type name="d/e/sw/a/Action"/> <type name="d/e/sw/a/Thr"/> </relation>
    <relation name="o"> <type name="d/e/sw/a/Register"/> <type name="d/e/sw/a/Thr"/> </relation>
    <relation name="rV"> <type name="d/e/sw/a/Action"/> <type name="Int"/> </relation>

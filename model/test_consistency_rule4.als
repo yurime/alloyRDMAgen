@@ -13,8 +13,8 @@ pred missPrevWrite4[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer|
 }
 
 /* Pivots for rule putOrRDMAatomic defined in  base_sw_rules */
-//fact{nA1Pivot in nWpq} 
-//fact{nA2Pivot in nWpq}
+//fact{nA1Pivot in Writer} 
+//fact{nA2Pivot in Writer}
 
 /* Hypothesis of the nic-ord-sw put or RDMAatomic rule on the pivots */
 fact {let e_t=RDMAExecution | missPrevWrite4[e_t,nA1Pivot, nA2Pivot, Witness]}

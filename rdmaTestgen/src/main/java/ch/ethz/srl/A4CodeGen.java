@@ -489,7 +489,7 @@ class TGCompareAndSwap extends TGWriterImpl implements TGReader, TGWriter {
     public void setRv(int rV) { this.rV = rV; }
     public TGMemoryLocation getLoc() { return super.getLoc(); }
     @Override public String toString() {
-        return String.format(" lcas '(' %s '=' %d '?' %d ')'",
+        return String.format(" lcas( %s = %d ? %d )",
         		super.getLoc(), rV, super.getWv());
     }
 
@@ -519,7 +519,7 @@ class TGRemoteCompareAndSwap extends TGInstruction {
 
     @Override
     public String toString() {//X = cas(Z^q,y,w)
-        return String.format("%s = cas (%s^%s,%d,%d,%d)", wp.getLoc(), rwpq.getLoc(), rwpq.getD().id, rwpq.getRv(), rwpq.getWv() );
+        return String.format("%s = cas (%s^%s,%d,%d)", wp.getLoc(), rwpq.getLoc(), rwpq.getD().id, rwpq.getRv(), rwpq.getWv() );
     }
 
 	public static TGInstruction Compose(State state, String label, Set<TGAction> actions,

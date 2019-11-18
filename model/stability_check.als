@@ -155,27 +155,36 @@ fact{all w:Writer, r:Reader | corf[r]=w iff (loc[r]=loc[w] and rV[r]=wV[w])}
 
 
 
+
 abstract sig Execution {
 // actions: set Actions,
 // po: Action->Action,
 // rf: Action->Action,
 // sw: Action->Action,
  mo: Writer->set Writer,
-//mo_next: Writer->lone Writer,
+ mo_next: Writer->lone Writer,
  mos: Writer->set Writer,
  hb: Action-> set Action,
- hbqp: Action->set Action,
+ //hbqp: Action->set Action,
  hbs: Action->set Action,
  Consistent: Boolean
 }{
+//mo_s definition
+   mos= (nRWpq+U) <: mo
+
   {
-   (cyclic_MoThenHbs or readAndMissPrevWriteInHbs
-   or tsoBufferCoherence1of3
-   or tsoBufferCoherence3of3)
+   ( hb_cyclic or cyclic_MoThenHb 
+      or {some a1,a2:Writer,a3:Reader | 
+         missPrevWrite3[a1,a2,a3]  
+         or missPrevWrite4[a1,a2,a3]
+         or missPrevWrite5[a1,a2,a3] 
+         or missPrevWrite6[a1,a2,a3]
+         or missPrevWrite7[a1,a2,a3] 
+         or missPrevWrite8[a1,a2,a3]
+         or missPrevWrite9[a1,a2,a3]
+    })
    implies Consistent=False else Consistent=True
   }
-{all i:Init, a:Writer-Init| not i in mo[a]}
-//{all w1,w2:Writer | w1 in w2.mo_next <=> (w1 in w2.mo and #(w2.mo-w1.mo)=1)}
 }
 
 
@@ -184,51 +193,84 @@ pred hb_cyclic[e:Execution] {
       cyclic[e.hb]
 }
 
-pred cyclic_MoThenHbs[e:Execution] {
-      cyclic[(e.mo).(e.hbs)]
-}
-
-pred readAndMissPrevWriteInHbs [e:Execution] {
-    some a,b,c:Action | a in c.corf and c in b.(e.hbs) and loc[a]=loc[b] and b in a.(e.mo)
+pred cyclic_MoThenHb[e:Execution] {
+      cyclic[(W<:(e.hb)).(e.mo)]//consistentcy 2
 }
 
 
-pred tsoBufferCoherence1of3 [e:Execution]{some a,b,c:Action | 
-    c in a.rf and // consistency 3
-    c in b.(e.mo).sw.(e.hbs) and 
-    loc[a]=loc[b] 
-    and b in a.(e.mo)
+pred missPrevWrite3[e:Execution,a1,a2:Writer,a3:Reader] {
+    a3 in a1.rf and // consistency 3
+    a3 in a2.(e.hb) and 
+	a2 not in nWpq and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
 }
 
-pred tsoBufferCoherence3of3 [e:Execution]{some a,b,c:Action | 
-    c in a.rf and  // consistency 4
-    c in b.(e.mo).(rf-po_tc).(e.hbs) and 
-     loc[a]=loc[b] 
-    and b in a.(e.mo)
+pred missPrevWrite4[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer|
+    a3 in a1.rf and // consistency 4
+    a4 in a2.(e.mo) and
+	a3 in a4.po.(^sw).(e.hb) and 
+	a4 in W and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
 }
-
-pred tsoFenceViolation [e:Execution]{some a,b,c:Action | 
-    c in a.rf and 
-    c in b.(e.mos).(e.hbs) and 
-     loc[a]=loc[b] 
-    and b in a.(e.mo)
+pred missPrevWrite5[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer |
+    a3 in a1.rf and // consistency 5
+    a4 in a2.(e.mo) and
+	a3 in a4.(rf-po_tc).(e.hb) and 
+	a4 in W and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
 }
-
+pred missPrevWrite6[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer|
+    a3 in a1.rf and // consistency 6
+    a4 in a2.(e.mos) and
+	a3 in a4.(e.hb) and 
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
+}
+pred missPrevWrite7[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer |
+    a3 in a1.rf and // consistency 7
+    a4 in a2.(rf-sw) and
+	a3 in a4.(e.hb) and 
+	a2 in nWpq and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
+}
+pred missPrevWrite8[e:Execution, a1,a2:Writer,a3:Reader] {
+    a3 in a1.rf and // consistency 8
+    a3 in a2.sw and
+	a2 in nWpq and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
+}
+pred missPrevWrite9[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer |
+    a3 in a1.rf and // consistency 8
+    a4 in a2.(e.mo) and
+    a3 in a4.(rf-sw).(e.hb) and
+	a4 in nWpq and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
+}
 
 one sig RDMAExecution extends Execution{
 
 }{
-  hb = ^(po+rf+sw)
-
 //mo basic definition
+   {mo=^mo}
+   {not cyclic[mo]}
+    {mo_next=mo-mo.mo}
+
   {all disj w1,w2:Writer | 
                  (host[loc[w1]]=host[loc[w2]]) 
                  <=> 
                 ((w1 in w2.mo) or (w2 in w1.mo))
    }
-   {mo=^mo}
-   {not cyclic[mo]}
+//{all w1,w2:Writer | w1 in w2.mo_next <=> (w1 in w2.mo and #(w2.mo-w1.mo)=1)}
+{all i:Init, a:Writer-Init| not i in mo[a]}
 
+  hb = ^(po_tc+rf+sw+mos)
+/*
 //hbqp definition
   hbqp in hb
   {all a: Action, b:a.hb|  b in a.hbqp
@@ -240,13 +282,9 @@ one sig RDMAExecution extends Execution{
       (b in a.rf)
       )
   }// end hbqp defintion
-
-//mo_s definition
-   mos in mo
-  {all w1:Writer| all w2:w1.mo| w2 in w1.mos iff w1 in nRWpq+U+nWp}
-
+*/
 //hbs definition 
-  hbs=^(hbqp+mos)
+  hbs=^(po_tc+rf +sw+mos)
 
 }// end of sig execution
 

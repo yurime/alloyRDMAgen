@@ -15,8 +15,8 @@ open driver as d
 
 /* Hypothesis of the nic-ord-sw put or RDMAatomic rule on the pivots */
 fact {let e_t=RDMAExecution | nA2Pivot in nA1Pivot.(e_t.mo_next)
-											and  nA1Pivot in W
-											and  nA2Pivot in nA1Pivot.(e_t.hbs)}
+											and  nA2Pivot in U
+											and  nA2Pivot in nA1Pivot.(e_t.hb)}
 
 /* rule from driver*/
 //fact{RDMAExecution_prime.Consistent=True}
@@ -64,8 +64,8 @@ pred show {
             #Thr = 2
         }
 
-
-run show for 10
+// since I am using mo_s it is subsumed in tests for rule2 of consistency
+run show for 6 // runs for 6 (819ms)
 
 /*run consist_lw_lw for 4//78ms.
 run consist_lw_nwp for 8//3241ms.

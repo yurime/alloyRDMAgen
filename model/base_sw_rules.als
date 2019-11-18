@@ -1,5 +1,6 @@
 open execution as e
 
+//TODO: change the pvito names below to A1Pivot, A2Pivot
 one sig nA1Pivot in Writer{}
 one sig nA2Pivot in Writer{}
 

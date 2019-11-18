@@ -89,7 +89,7 @@ pred missPrevWrite7[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer |
 }
 pred missPrevWrite8[e:Execution, a1,a2:Writer,a3:Reader] {
     a3 in a1.rf and // consistency 8
-    a2 in a3.nic_ord_sw and
+    a3 in a2.nic_ord_sw and
 	a2 in nWpq and
     loc[a1]=loc[a2] 
     and a2 in a1.(e.mo)

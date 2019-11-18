@@ -322,7 +322,8 @@ public void incorporateTestWitnesses(PrintStream os) {
 	    	os.println(); os.println(); 
 	    }
     }
-    public void macroExpand(PrintStream os, int payload, String outputName) throws java.io.IOException {
+    //public void macroExpand(PrintStream os, int payload, String outputName, Node n) throws java.io.IOException {
+        public void macroExpand(PrintStream os, int payload, String outputName) throws java.io.IOException {
     	
         switch (payload) {
 		case 0:
