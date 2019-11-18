@@ -83,75 +83,146 @@ pred threeThreads { #Thr = 2 }
 /* Properties of the test */
 pred consist_lw_lw {
             (nA1Pivot in W) and
-           (nA2Pivot in W) and
+           (nA2Pivot in W) 
             //#Rcas = 0 and
             //#Rga = 0 and
             //#Action = 7 and
-            #Thr = 2
         }
 pred consist_lw_nwp {
             (nA1Pivot in W) and
-           (nA2Pivot in nWp) and
+           (nA2Pivot in nWp) 
             //#Rcas = 0 and
             //#Rga = 0 and
             //#Action = 7 and
-            #Thr = 2
         }
 pred consist_lw_nwpq {
             (nA1Pivot in W) and
-           (nA2Pivot in nWpq) and
+           (nA2Pivot in nWpq) 
             //#Rcas = 0 and
             //#Rga = 0 and
             //#Action = 7 and
-            #Thr = 2
         }
 
 pred consist_nwp_lw {
             (nA1Pivot in nWp) and
-           (nA2Pivot in W) and
+           (nA2Pivot in W) 
             //#Rcas = 0 and
             //#Rga = 0 and
             //#Action = 7 and
-            #Thr = 2
+        }
+
+pred consist_nwp_u {
+            (nA1Pivot in nWp) and
+           (nA2Pivot in U) 
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+        }
+pred consist_u_lw {
+            (nA1Pivot in U) and
+           (nA2Pivot in W) 
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+        }
+pred consist_lw_u {
+            (nA1Pivot in W) and
+           (nA2Pivot in U) 
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+        }
+pred consist_u_u {
+            (nA1Pivot in U) and
+           (nA2Pivot in U) 
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+        }
+pred consist_u_nwp {
+            (nA1Pivot in U) and
+           (nA2Pivot in nWp) 
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+        }
+pred consist_u_nwpq {
+            (nA1Pivot in U) and
+           (nA2Pivot in nWpq) 
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
+        }
+
+pred consist_nwp_u {
+            (nA1Pivot in nWp) and
+           (nA2Pivot in U) 
+            //#Rcas = 0 and
+            //#Rga = 0 and
+            //#Action = 7 and
         }
 pred consist_nwp_nwp {
             (nA1Pivot in nWp) and
-           (nA2Pivot in nWp) and
+           (nA2Pivot in nWp) 
             //#Rcas = 0 and
             //#Rga = 0 and
             //#Action = 7 and
-            #Thr = 2
         }
 pred consist_nwp_nwpq {
             (nA1Pivot in nWp) and
-           (nA2Pivot in nWpq) and
+           (nA2Pivot in nWpq) 
             //#Rcas = 0 and
             //#Rga = 0 and
             //#Action = 7 and
-            #Thr = 2
         }
 pred consist_nwpq_lw {
             (nA1Pivot in nWpq) and
-           (nA2Pivot in W) and
+           (nA2Pivot in W) 
             //#Rcas = 0 and
             //#Rga = 0 and
             //#Action = 7 and
-            #Thr = 2
         }
 pred consist_nwpq_nwp {
             (nA1Pivot in nWpq) and
-           (nA2Pivot in nWp) and
+           (nA2Pivot in nWp) 
             //#Rcas = 0 and
             //#Rga = 0 and
             //#Action = 7 and
-            #Thr = 2
         }
 pred consist_nwpq_nwpq {
             (nA1Pivot in nWpq) and
-           (nA2Pivot in nWpq) and
+           (nA2Pivot in nWpq) 
             //#Rcas = 0 and
             //#Rga = 0 and
             //#Action = 7 and
-            #Thr = 2
         }
-
+pred nA1_lw {
+            (nA1Pivot in W) 
+        }
+pred nA2_lw {
+            (nA2Pivot in W) 
+        }
+pred nA1_nwp {
+            (nA1Pivot in nWp) 
+        }
+pred nA2_nwp {
+            (nA2Pivot in nWp) 
+        }
+pred nA1_nwpq {
+            (nA1Pivot in nWpq) 
+        }
+pred nA2_nwpq {
+            (nA2Pivot in nWpq) 
+        }
+pred nA1_u {
+            (nA1Pivot in U) 
+        }
+pred nA2_u {
+            (nA2Pivot in U) 
+        }
+pred nA1_nrwpq {
+            (nA1Pivot in nRWpq) 
+        }
+pred nA2_nrwpq {
+            (nA2Pivot in nRWpq) 
+        }

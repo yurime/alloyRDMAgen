@@ -98,7 +98,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
 
             result.programBuffer.append("\n /* " + vCtx.getText() + " */ \n");
             result.programBuffer.append("\n and o[" + initValName + "] = p" + currentProcNumber +
-                                        "\n and wl[" + initValName + "] = " + writeVar +
+                                        "\n and loc[" + initValName + "] = " + writeVar +
                                         "\n and wV[" + initValName + "] = " + rhs +
                                         "\n and host[" + writeVar + "] = n" + currentNodeNumber + "\n");
             this.counter++;
@@ -239,7 +239,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
 
         result.programBuffer.append("\n and o[" + storeName + "] = p" + currentProcNumber +
                 "\n and d[" + storeName + "] = p" + currentProcNumber +
-                "\n and wl[" + storeName + "] = " + writeVar +
+                "\n and loc[" + storeName + "] = " + writeVar +
                 "\n and wV[" + storeName + "] = " + rhs);
 
           appendPOtoProg(storeName);
@@ -268,7 +268,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
 
         result.programBuffer.append("\n and o[" + loadName + "] = p" + currentProcNumber +
                 "\n and d[" + loadName + "] = p" + currentProcNumber +
-                "\n and rl[" + loadName + "] = " + readVar +
+                "\n and loc[" + loadName + "] = " + readVar +
                 "\n and reg[" + loadName + "] = " + encodeVarName(lhs));
         appendPOtoProg(loadName);
         this.result.actionsNumber++;
@@ -286,9 +286,11 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String sxName = "vsx" + counter;
         String rpqName = "vrpq" + counter;
         String wpName = "vwp" + counter;
+        String exName = "vex" + counter;
         
-        this.swSizeMap.put(wpName, new MutableInt(0));
+        this.swSizeMap.put(wpName, new MutableInt(1));
         this.swSizeMap.put(rpqName, new MutableInt(1));
+        this.swSizeMap.put(exName, new MutableInt(0));
         
         result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
 
@@ -297,14 +299,18 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             condAppend(sxName, result.actionSx);
             condAppend(rpqName, result.actionRpq);
             condAppend(wpName, result.actionWp);
+            condAppend(exName, result.actionEx);
         } else {
 
             appendVarToBuffer(sxName, result.Items);
             appendVarToBuffer(rpqName, result.Items);
             appendVarToBuffer(wpName, result.Items);
+            appendVarToBuffer(exName, result.Items);
             condTypePrint(sxName, "Sx");
             condTypePrint(rpqName, "nRpq");
             condTypePrint(wpName, "nWp");
+            condTypePrint(exName, "nEx");
+            actions_in_ifs.peek().add(exName);
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(rpqName);
             actions_in_ifs.peek().add(wpName);
@@ -313,20 +319,23 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         result.programBuffer.append(
         		"\n and o[" + sxName + "] = p" + currentProcNumber +
                 "\n and d[" + sxName + "] = p" + destProcessNumber +
+        		"\n and o[" + exName + "] = p" + currentProcNumber +
+                "\n and d[" + exName + "] = p" + currentProcNumber +
                 "\n and o[" + rpqName + "] = p" + currentProcNumber +
                 "\n and d[" + rpqName + "] = p" + destProcessNumber +
-                "\n and rl[" + rpqName + "] = " + readVar +
+                "\n and loc[" + rpqName + "] = " + readVar +
                 "\n and " + rpqName + " in sw[" + sxName + "]//nic-inst-sw" +
                 "\n and #sw[" + sxName + "]=1" +
                 "\n and o[" + wpName + "] = p" + currentProcNumber +
                 "\n and d[" + wpName + "] = p" + currentProcNumber +
                 "\n and " + wpName + " in sw[" + rpqName + "]//nic-inst-sw" +
-                "\n and wl[" + wpName + "] = " + writeVar +
+                "\n and " + exName + " in sw[" + wpName + "]//nic-inst-sw" +
+                "\n and loc[" + wpName + "] = " + writeVar +
                 "\n and wV[" + wpName + "] = rV[" + rpqName + "]");
         appendGetToOrdSw(rpqName, wpName, targetProcess);
-        addUnpolledAction(targetProcess, wpName);
+        addUnpolledAction(targetProcess, exName);
         appendPOtoProg(sxName);
-        this.result.actionsNumber+=3;
+        this.result.actionsNumber+=4;
         this.counter++;
 
         return null;
@@ -343,9 +352,11 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String nfName = "vnf" + counter;
         String rpqName = "vrpq" + counter;
         String wpName = "vwp" + counter;
+        String exName = "vex" + counter;
         
-        this.swSizeMap.put(wpName, new MutableInt(0));
         this.swSizeMap.put(rpqName, new MutableInt(1));
+        this.swSizeMap.put(exName, new MutableInt(0));
+        this.swSizeMap.put(wpName, new MutableInt(1));
         
         result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
 
@@ -354,17 +365,21 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             condAppend(sxName, result.actionSx);
             condAppend(rpqName, result.actionRpq);
             condAppend(wpName, result.actionWp);
-            condAppend(nfName, result.actionNf);
+            condAppend(nfName, result.actionNf);;
+            condAppend(exName, result.actionEx);
         } else {
 
             appendVarToBuffer(sxName, result.Items);
             appendVarToBuffer(nfName, result.Items);
             appendVarToBuffer(rpqName, result.Items);
             appendVarToBuffer(wpName, result.Items);
+            appendVarToBuffer(exName, result.Items);
             condTypePrint(sxName, "Sx");
             condTypePrint(nfName, "nF");
             condTypePrint(rpqName, "nRpq");
             condTypePrint(wpName, "nWp");
+            condTypePrint(exName, "nEx");
+            actions_in_ifs.peek().add(exName);
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(nfName);
             actions_in_ifs.peek().add(rpqName);
@@ -378,7 +393,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
                 "\n and d[" + nfName + "] = p" + currentProcNumber +
                 "\n and o[" + rpqName + "] = p" + currentProcNumber +
                 "\n and d[" + rpqName + "] = p" + destProcessNumber +
-                "\n and rl[" + nfName + "] = " + readVar +
+                "\n and loc[" + nfName + "] = " + readVar +
                 "\n and " + rpqName + " in sw[" + sxName + "]//nic-inst-sw" +
                 "\n and #sw[" + sxName + "]=1" +
                 "\n and " + rpqName + " in sw[" + nfName + "]//nic-inst-sw" +
@@ -386,13 +401,14 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
                 "\n and o[" + wpName + "] = p" + currentProcNumber +
                 "\n and d[" + wpName + "] = p" + currentProcNumber +
                 "\n and " + wpName + " in sw[" + rpqName + "]//nic-inst-sw" +
-                "\n and wl[" + wpName + "] = " + writeVar +
+                "\n and " + exName + " in sw[" + wpName + "]//nic-inst-sw" +
+                "\n and loc[" + wpName + "] = " + writeVar +
                 "\n and wV[" + wpName + "] = rV[" + rpqName + "]");
         appendFencedOpToSw(nfName, targetProcess);
         appendGetToOrdSw(rpqName,wpName, targetProcess);
-        addUnpolledAction(targetProcess, wpName);
+        addUnpolledAction(targetProcess, exName);
         appendPOtoProg(sxName);
-        this.result.actionsNumber+=3;
+        this.result.actionsNumber+=5;
         this.counter++;
 
         return null;
@@ -408,8 +424,10 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String nfName = "vnf" + counter;
         String rpName = "vrp" + counter;
         String wpqName = "vwpq" + counter;
+        String exName = "vex" + counter;
         
-        this.swSizeMap.put(wpqName, new MutableInt(0)); 
+        this.swSizeMap.put(wpqName, new MutableInt(1));
+        this.swSizeMap.put(exName, new MutableInt(0));
         this.swSizeMap.put(rpName, new MutableInt(1));
 
         result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
@@ -420,16 +438,20 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             condAppend(nfName, result.actionNf);
             condAppend(rpName, result.actionRp);
             condAppend(wpqName, result.actionWpq);
+            condAppend(exName, result.actionEx);
         } else {
 
             appendVarToBuffer(sxName, result.Items);
             appendVarToBuffer(nfName, result.Items);
             appendVarToBuffer(rpName, result.Items);
             appendVarToBuffer(wpqName, result.Items);
+            appendVarToBuffer(exName, result.Items);
             condTypePrint(sxName, "Sx");
             condTypePrint(nfName, "nF");
             condTypePrint(rpName, "nRp");
             condTypePrint(wpqName, "nWpq");
+            condTypePrint(exName, "nEx");
+            actions_in_ifs.peek().add(exName);
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(nfName);
             actions_in_ifs.peek().add(rpName);
@@ -441,22 +463,23 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
                 "\n and d[" + sxName + "] = " + targetProcess + 
                 "\n and o[" + rpName + "] = p" + currentProcNumber +
                 "\n and d[" + rpName + "] = p" + currentProcNumber +
-                "\n and rl[" + rpName + "] = " + readVar +
+                "\n and loc[" + rpName + "] = " + readVar +
                 "\n and " + nfName + " in sw[" + sxName + "]//nic-inst-sw" +
                 "\n and #sw[" + sxName + "]=1" +
                 "\n and " + rpName + " in sw[" + nfName + "]//nic-inst-sw" +
                 "\n and #sw[" + nfName + "]=1" +
                 "\n and " + wpqName + " in sw[" + rpName + "]//nic-inst-sw" +
+                "\n and " + exName + " in sw[" + wpqName + "]//nic-inst-sw" +
                 "\n and o[" + wpqName + "] = p" + currentProcNumber +
                 "\n and d[" + wpqName + "] = p" + destProcessNumber +
-                "\n and wl[" + wpqName + "] = " + writeVar +
+                "\n and loc[" + wpqName + "] = " + writeVar +
                 "\n and wV[" + wpqName + "] = rV[" + rpName + "]");
         appendPutToOrdSw(rpName, wpqName, targetProcess);
         appendFencedOpToSw(nfName, targetProcess);
-        addUnpolledAction(targetProcess, wpqName);
+        addUnpolledAction(targetProcess, exName);
         appendPOtoProg(sxName);
         this.counter++;
-        this.result.actionsNumber+=3;
+        this.result.actionsNumber+=5;
 
         return null;
     }
@@ -470,8 +493,10 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String sxName = "vsx" + counter;
         String rpName = "vrp" + counter;
         String wpqName = "vwpq" + counter;
+        String exName = "vex" + counter;
         
-        this.swSizeMap.put(wpqName, new MutableInt(0)); 
+        this.swSizeMap.put(wpqName, new MutableInt(1));
+        this.swSizeMap.put(exName, new MutableInt(0));
         this.swSizeMap.put(rpName, new MutableInt(1));
 
         result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
@@ -481,14 +506,18 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             condAppend(sxName, result.actionSx);
             condAppend(rpName, result.actionRp);
             condAppend(wpqName, result.actionWpq);
+            condAppend(exName, result.actionEx);
         } else {
 
             appendVarToBuffer(sxName, result.Items);
             appendVarToBuffer(rpName, result.Items);
             appendVarToBuffer(wpqName, result.Items);
+            appendVarToBuffer(exName, result.Items);
             condTypePrint(sxName, "Sx");
             condTypePrint(rpName, "nRp");
             condTypePrint(wpqName, "nWpq");
+            condTypePrint(exName, "nEx");
+            actions_in_ifs.peek().add(exName);
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(rpName);
             actions_in_ifs.peek().add(wpqName);
@@ -499,19 +528,20 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
                 "\n and d[" + sxName + "] = " + targetProcess + 
                 "\n and o[" + rpName + "] = p" + currentProcNumber +
                 "\n and d[" + rpName + "] = p" + currentProcNumber +
-                "\n and rl[" + rpName + "] = " + readVar +
+                "\n and loc[" + rpName + "] = " + readVar +
                 "\n and " + rpName + " in sw[" + sxName + "]//nic-inst-sw" +
                 "\n and #sw[" + sxName + "]=1" +
                 "\n and " + wpqName + " in sw[" + rpName + "]//nic-inst-sw" +
+                "\n and " + exName + " in sw[" + wpqName + "]//nic-inst-sw" +
                 "\n and o[" + wpqName + "] = p" + currentProcNumber +
                 "\n and d[" + wpqName + "] = p" + destProcessNumber +
-                "\n and wl[" + wpqName + "] = " + writeVar +
+                "\n and loc[" + wpqName + "] = " + writeVar +
                 "\n and wV[" + wpqName + "] = rV[" + rpName + "]");
         appendPutToOrdSw(rpName, wpqName, targetProcess);
-        addUnpolledAction(targetProcess, wpqName);
+        addUnpolledAction(targetProcess, exName);
         appendPOtoProg(sxName);
         this.counter++;
-        this.result.actionsNumber+=3;
+        this.result.actionsNumber+=4;
 
         return null;
     }
@@ -526,10 +556,12 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String sxName = "vsx" + counter;
         String rwpqName = "vrwpq" + counter;
         String wpName = "vwp" + counter;
+        String exName = "vex" + counter;
 
 
         this.swSizeMap.put(rwpqName, new MutableInt(1));
-        this.swSizeMap.put(wpName, new MutableInt(0)); 
+        this.swSizeMap.put(wpName, new MutableInt(1));
+        this.swSizeMap.put(exName, new MutableInt(0)); 
 
         result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
 
@@ -537,14 +569,18 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             condAppend(sxName, result.actionSx);
             condAppend(rwpqName, result.actionRWpq);
             condAppend(wpName, result.actionWp);
+            condAppend(exName, result.actionEx);
         } else {
 
             appendVarToBuffer(sxName, result.Items);
             appendVarToBuffer(rwpqName, result.Items);
             appendVarToBuffer(wpName, result.Items);
+            appendVarToBuffer(exName, result.Items);
             condTypePrint(sxName, "Sx");
             condTypePrint(rwpqName, "nRWpq");
             condTypePrint(wpName, "nWp");
+            condTypePrint(exName, "nEx");
+            actions_in_ifs.peek().add(exName);
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(rwpqName);
             actions_in_ifs.peek().add(wpName);
@@ -555,22 +591,23 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
                 "\n and " + rwpqName + " in sw[" + sxName + "]//nic-inst-sw" +
                 "\n and #sw[" + sxName + "]=1" +
                 "\n and " + wpName + " in sw[" + rwpqName + "]//nic-inst-sw" +
+                "\n and " + exName + " in sw[" + wpName + "]//nic-inst-sw" +
 
                 "\n and o[" + rwpqName + "] = p" + currentProcNumber +
                 "\n and d[" + rwpqName + "] = p" + destProcessNumber +
-                "\n and wl[" + rwpqName + "] = " + readWriteVar +
+                "\n and loc[" + rwpqName + "] = " + readWriteVar +
                 "\n and wV[" + rwpqName + "] = rV[" + rwpqName + "].plus[" + updateVal + "]" +
 
                 "\n and o[" + wpName + "] = p" + currentProcNumber +
                 "\n and d[" + wpName + "] = p" + currentProcNumber +
-                "\n and wl[" + wpName + "] = " + writeVar +
+                "\n and loc[" + wpName + "] = " + writeVar +
                 "\n and wV[" + wpName + "] = rV[" + rwpqName + "]");
         
 		appendRgaToOrdSw(rwpqName, targetProcess);
-        addUnpolledAction(targetProcess, wpName);
+        addUnpolledAction(targetProcess, exName);
         appendPOtoProg(sxName);
         this.counter++;
-        this.result.actionsNumber+=3;
+        this.result.actionsNumber+=4;
 
         return null;
     }
@@ -583,13 +620,15 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         int newValue = Integer.parseInt(ctx.Number(2).getText());
         String writeVar = ctx.Identifier(0).getText(); 
         String readCompareVar = ctx.Identifier(1).getText();
+        String exName = "vex" + counter;
 
         String sxName = "vsx" + counter;
         String rwpqName = "vrwpq" + counter;
         String wpName = "vwp" + counter;
 
         this.swSizeMap.put(rwpqName, new MutableInt(1)); 
-        this.swSizeMap.put(wpName, new MutableInt(0));
+        this.swSizeMap.put(wpName, new MutableInt(1));
+        this.swSizeMap.put(exName, new MutableInt(0));
         
         result.programBuffer.append("\n /*" + ctx.getText() + " */ \n");
 
@@ -597,6 +636,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             condAppend(sxName, result.actionSx);
             condAppend(rwpqName, result.actionRWpq);
             condAppend(wpName, result.actionWp);
+            condAppend(exName, result.actionEx);
         } else {
             appendVarToBuffer(sxName, result.Items);
             appendVarToBuffer(rwpqName, result.Items);
@@ -605,6 +645,8 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             condTypePrint(sxName, "Sx");
             condTypePrint(rwpqName, "nRWpq");
             condTypePrint(wpName, "nWp");
+            condTypePrint(exName, "nEx");
+            actions_in_ifs.peek().add(exName);
 
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(rwpqName);
@@ -616,7 +658,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
                 	"\n and d[" + sxName + "] = " + targetProcess + 
                 	"\n and o[" + rwpqName + "] = p" + currentProcNumber +
                     "\n and d[" + rwpqName + "] = " + targetProcess +
-                    "\n and rl[" + rwpqName + "] = " + readCompareVar +
+                    "\n and loc[" + rwpqName + "] = " + readCompareVar +
                     "\n and " + rwpqName + " in sw[" + sxName + "]//nic-inst-sw" +
                     "\n and #sw[" + sxName + "]=1" +
 
@@ -626,15 +668,16 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
 
                     "\n and o[" + wpName + "] = p" + currentProcNumber +
                     "\n and d[" + wpName + "] = p" + currentProcNumber +
-                    "\n and wl[" + wpName + "] = " + writeVar +
+                    "\n and loc[" + wpName + "] = " + writeVar +
                     "\n and wV[" + wpName + "] = rV[" + rwpqName +"]" +
+                    "\n and " + exName + " in sw[" + wpName + "]//nic-inst-sw" +
                     "\n and " + wpName + " in sw[" + rwpqName + "]//nic-inst-sw");
 
 		appendCasToOrdSw(rwpqName, targetProcess);
-        addUnpolledAction(targetProcess, wpName);
+        addUnpolledAction(targetProcess, exName);
         appendPOtoProg(sxName);
         this.counter++;
-        this.result.actionsNumber+=3;
+        this.result.actionsNumber+=4;
 
 
         return null;
@@ -651,10 +694,12 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String nfName = "vnf" + counter;
         String rwpqName = "vrwpq" + counter;
         String wpName = "vwp" + counter;
+        String exName = "vex" + counter;
 
 
         this.swSizeMap.put(rwpqName, new MutableInt(1));
-        this.swSizeMap.put(wpName, new MutableInt(0)); 
+        this.swSizeMap.put(wpName, new MutableInt(1));
+        this.swSizeMap.put(exName, new MutableInt(0)); 
 
         result.programBuffer.append("\n /* " + ctx.getText() + " */ \n");
 
@@ -663,16 +708,20 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             condAppend(nfName, result.actionNf);
             condAppend(rwpqName, result.actionRWpq);
             condAppend(wpName, result.actionWp);
+            condAppend(exName, result.actionEx);
         } else {
 
             appendVarToBuffer(sxName, result.Items);
             appendVarToBuffer(nfName, result.Items);
             appendVarToBuffer(rwpqName, result.Items);
             appendVarToBuffer(wpName, result.Items);
+            appendVarToBuffer(exName, result.Items);
             condTypePrint(sxName, "Sx");
             condTypePrint(nfName, "nF");
             condTypePrint(rwpqName, "RWpq");
             condTypePrint(wpName, "Wp");
+            condTypePrint(exName, "nEx");
+            actions_in_ifs.peek().add(exName);
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(nfName);
             actions_in_ifs.peek().add(rwpqName);
@@ -689,23 +738,24 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
                 "\n and " + rwpqName + " in sw[" + nfName + "]//nic-inst-sw" +
                 "\n and #sw[" + nfName + "]=1" +
                 "\n and " + wpName + " in sw[" + rwpqName + "]//nic-inst-sw" +
+                "\n and " + exName + " in sw[" + wpName + "]//nic-inst-sw" +
 
                 "\n and o[" + rwpqName + "] = p" + currentProcNumber +
                 "\n and d[" + rwpqName + "] = p" + destProcessNumber +
-                "\n and wl[" + rwpqName + "] = " + readWriteVar +
+                "\n and loc[" + rwpqName + "] = " + readWriteVar +
                 "\n and wV[" + rwpqName + "] = rV[" + rwpqName + "].plus[" + updateVal + "]" +
 
                 "\n and o[" + wpName + "] = p" + currentProcNumber +
                 "\n and d[" + wpName + "] = p" + currentProcNumber +
-                "\n and wl[" + wpName + "] = " + writeVar +
+                "\n and loc[" + wpName + "] = " + writeVar +
                 "\n and wV[" + wpName + "] = rV[" + rwpqName + "]");
 
         appendFencedOpToSw(nfName, targetProcess);
 		appendRgaToOrdSw(rwpqName, targetProcess);
-        addUnpolledAction(targetProcess, wpName);
+        addUnpolledAction(targetProcess, exName);
         appendPOtoProg(sxName);
         this.counter++;
-        this.result.actionsNumber+=3;
+        this.result.actionsNumber+=5;
 
         return null;
     }
@@ -723,9 +773,11 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
         String nfName = "vnf" + counter;
         String rwpqName = "vrwpq" + counter;
         String wpName = "vwp" + counter;
+        String exName = "vex" + counter;
 
         this.swSizeMap.put(rwpqName, new MutableInt(1)); 
-        this.swSizeMap.put(wpName, new MutableInt(0));
+        this.swSizeMap.put(wpName, new MutableInt(1));
+        this.swSizeMap.put(exName, new MutableInt(0));
         
         result.programBuffer.append("\n /*" + ctx.getText() + " */ \n");
 
@@ -734,6 +786,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             condAppend(nfName, result.actionNf);
             condAppend(rwpqName, result.actionRWpq);
             condAppend(wpName, result.actionWp);
+            condAppend(exName, result.actionEx);
         } else {
             appendVarToBuffer(sxName, result.Items);
             appendVarToBuffer(nfName, result.Items);
@@ -744,6 +797,8 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
             condTypePrint(nfName, "nF");
             condTypePrint(rwpqName, "RWpq");
             condTypePrint(wpName, "Wp");
+            condTypePrint(exName, "nEx");
+            actions_in_ifs.peek().add(exName);
 
             actions_in_ifs.peek().add(sxName);
             actions_in_ifs.peek().add(nfName);
@@ -758,7 +813,7 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
                     "\n and d[" + nfName + "] = p" + currentProcNumber +
                 	"\n and o[" + rwpqName + "] = p" + currentProcNumber +
                     "\n and d[" + rwpqName + "] = " + targetProcess +
-                    "\n and rl[" + rwpqName + "] = " + readCompareVar +
+                    "\n and loc[" + rwpqName + "] = " + readCompareVar +
                     "\n and " + nfName + " in sw[" + sxName + "]//nic-inst-sw" +
                     "\n and #sw[" + sxName + "]=1" +
                     "\n and " + rwpqName + " in sw[" + nfName + "]//nic-inst-sw" +
@@ -769,16 +824,17 @@ public class TranslateVisitor extends TLBaseVisitor<Object> {
 
                     "\n and o[" + wpName + "] = p" + currentProcNumber +
                     "\n and d[" + wpName + "] = p" + currentProcNumber +
-                    "\n and wl[" + wpName + "] = " + writeVar +
+                    "\n and " + exName + " in sw[" + wpName + "]//nic-inst-sw" +
+                    "\n and loc[" + wpName + "] = " + writeVar +
                     "\n and wV[" + wpName + "] = rV[" + rwpqName +"]" +
                     "\n and " + wpName + " in sw[" + rwpqName + "]//nic-inst-sw");
 
 		appendCasToOrdSw(rwpqName, targetProcess);
         appendFencedOpToSw(nfName, targetProcess);
-        addUnpolledAction(targetProcess, wpName);
+        addUnpolledAction(targetProcess, exName);
         appendPOtoProg(sxName);
         this.counter++;
-        this.result.actionsNumber+=3;
+        this.result.actionsNumber+=5;
 
 
         return null;

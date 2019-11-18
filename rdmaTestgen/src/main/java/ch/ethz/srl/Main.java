@@ -140,32 +140,40 @@ public class Main {
                 System.exit(1);
             }
             Expr q2 = null;
-            if (nA1type.equals("lw"))
-            	q2 = nA1_lw.fun.getBody().and(q1);
-            else if (nA1type.equals("u"))
-            	q2 = nA1_U.fun.getBody().and(q1);
-            else if (nA1type.equals("nwp"))
-            	q2 = nA1_nwp.fun.getBody().and(q1);
-            else if (nA1type.equals("nrwpq"))
-            	q2 = nA1_nwpq.fun.getBody().and(q1);
-            else {
-                System.err.printf("-w1 must be either lw or u or nwp or nrwpq not: %s ",nA1_nwpq );
-                System.exit(1);
+            if(null!= nA1type) {
+	            if (nA1type.equals("lw"))
+	            	q2 = nA1_lw.fun.getBody().and(q1);
+	            else if (nA1type.equals("u"))
+	            	q2 = nA1_U.fun.getBody().and(q1);
+	            else if (nA1type.equals("nwp"))
+	            	q2 = nA1_nwp.fun.getBody().and(q1);
+	            else if (nA1type.equals("nrwpq"))
+	            	q2 = nA1_nwpq.fun.getBody().and(q1);
+	            else {
+	                System.err.printf("-w1 must be either lw or u or nwp or nrwpq not: %s ",nA1_nwpq );
+	                System.exit(1);
+	            }
+            }else {
+            	q2 = q1;
             }
 
             Expr query = null;
-            if (nA2type.equals("lw"))
-            	query = nA2_lw.fun.getBody().and(q2);
-            else if (nA2type.equals("u"))
-            	query = nA2_U.fun.getBody().and(q2);
-            else if (nA2type.equals("nwp"))
-            	query = nA2_nwp.fun.getBody().and(q2);
-            else if (nA2type.equals("nrwpq"))
-            	query = nA2_nwpq.fun.getBody().and(q2);
-            else {
-                System.err.printf("-w2 must be either lw or u or nwp or nrwpq not: %s",nA2_nwpq );
-                System.exit(1);
-            }
+            if(null!= nA1type) {
+	            if (nA2type.equals("lw"))
+	            	query = nA2_lw.fun.getBody().and(q2);
+	            else if (nA2type.equals("u"))
+	            	query = nA2_U.fun.getBody().and(q2);
+	            else if (nA2type.equals("nwp"))
+	            	query = nA2_nwp.fun.getBody().and(q2);
+	            else if (nA2type.equals("nrwpq"))
+	            	query = nA2_nwpq.fun.getBody().and(q2);
+	            else {
+	                System.err.printf("-w2 must be either lw or u or nwp or nrwpq not: %s",nA2_nwpq );
+	                System.exit(1);
+	            }
+		    }else {
+		    	query = q2;
+		    }
             Command command = new Command(false, scope, -1, -1, query);
             for (A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, options); ans.satisfiable(); ans = ans.next()) {
                 solutionCount++;

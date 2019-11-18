@@ -4,7 +4,7 @@
  * Updated by yuri on 09/2019.
  */
 public class TranslateValue {
-    StringBuffer programBuffer, actionR, actionW, actionSx, actionNf, actionRp, actionRpq, actionWp, actionWpq, actionRWpq,
+    StringBuffer programBuffer, actionR, actionW, actionSx, actionEx,actionNf, actionRp, actionRpq, actionWp, actionWpq, actionRWpq,
                  MemoryLocation, Processes, Nodes, InitialValue, actionPollCQ, Integers, Assertion, Items;
     int actionsNumber;
 	int nodesNumber;
@@ -19,6 +19,7 @@ public class TranslateValue {
         this.actionR = new StringBuffer();
         this.actionW = new StringBuffer();
         this.actionSx = new StringBuffer();
+        this.actionEx = new StringBuffer();
         this.actionNf = new StringBuffer();
         this.actionRp = new StringBuffer();
         this.actionRpq = new StringBuffer();
@@ -55,10 +56,13 @@ public class TranslateValue {
             result.append("disj " + actionR.toString() + ":  R,\n");
         }
         if (actionW.length() > 0) {
-            result.append("disj " + actionW.toString() + ": (Write - InitialValue),\n");
+            result.append("disj " + actionW.toString() + ": (Writer - Init),\n");
         }
         if (actionSx.length() > 0) {
             result.append("disj " + actionSx.toString() + ":  Sx,\n");
+        }
+        if (actionEx.length() > 0) {
+            result.append("disj " + actionEx.toString() + ":  nEx,\n");
         }
         if (actionNf.length() > 0) {
             result.append("disj " + actionSx.toString() + ":  nF,\n");

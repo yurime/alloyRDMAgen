@@ -115,6 +115,11 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
 			    os.printf(tabs + "REMOTE_SHARED(%s, con.at(%d));\n", v.name, q.procId);
 			}
 		}
+		if(!me.isServer()) {
+			for (Var v : varsValue.procToLocal.get(me)) {
+			    os.printf(tabs + "REMOTE_SHARED(tr%s_%s, con.at(0));\n", me, v.name);
+	    	}
+		}
    }
 
    /*
@@ -128,9 +133,11 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
     	}
 
     	os.printf(tabs + "int my_id=%s;\n", p);
+    	os.printf(tabs + "int ret=0;\n");
     	os.println(tabs + "string whoami=\"thr\"+my_id;");
-    	os.printf(tabs + "uint64_t %s;\n", vars);
-    	os.printf(tabs + "rdma::ConnectionManager con(%s, thr_ips[%s]);\n", p, p);
+    	if(vars.length() > 0) 
+    		os.printf(tabs + "uint64_t %s;\n", vars);
+    	os.printf(tabs + "rdma::ConnectionManager con(%s, thr_ports[%s]);\n", p, p);
     	   
     }
 //
@@ -218,15 +225,15 @@ public void incorporateTestWitnesses(PrintStream os) {
 		sentVars.addAll(varsValue.procToLocal.get(p));
         for (Var v : sentVars) {
             os.printf(tabs + "Scrap = %s;\n", v, v);
-            os.printf(tabs + "POST_PUT(con, tcp_port,Scrap,tr%s_%s);\n", p, v);
-            os.printf(tabs + "POLL_CQ(con,tcp_port);\n");
+            os.printf(tabs + "POST_PUT(con.at(0), whoami, Scrap, tr%s_%s);\n", p, v);
+            os.printf(tabs + "POLL_CQ(con.at(0), whoami);\n");
         }
     }
  
     public void  incorporateCppMacros(PrintStream os, String outputName)  {
 
-    	os.printf("FILE_NAME %s\n", outputName);
-    	os.printf("NUM_THREADS %d\n", this.instanceValue.processes.size());
+    	os.printf("#define FILE_NAME \"%s\"\n", outputName);
+    	os.printf("#define NUM_THREADS %d\n", this.instanceValue.processes.size());
     }
     
     public void incorporateMain(PrintStream os)  {
@@ -241,7 +248,7 @@ public void incorporateTestWitnesses(PrintStream os) {
         	}
     		os.printf("if (%s==thr_id){\n", p);
     		os.printf(tabs + sing_tab + "rc = thr%s();\n",p);
-    		os.printf(tabs + sing_tab + "std::cout << \"thr%s\"\n", p);
+    		os.printf(tabs + sing_tab + "std::cout << \"thr%s\";\n", p);
     		
         }
 		os.println(tabs + "}");

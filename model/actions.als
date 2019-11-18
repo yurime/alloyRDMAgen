@@ -55,8 +55,8 @@ sig Init extends W{}
 sig RDMAaction in Action {
 	instr : one Instruction,
 	instr_sw: lone nA,
-    sw : set Action,
-    sw_s : set Action
+    sw : set Action//,
+    //sw_s : set Action
 }
 
 abstract sig LocalCPUaction extends Action{
@@ -103,8 +103,8 @@ fact {all u:U| u in Writer and u in Reader
 /*NIC action*/
 abstract sig nA extends Action{
     nic_ord_sw: set nA,
-    nic_ord_sw_s: set nA,
-    poll_cq_sw_s: lone poll_cq,
+//    nic_ord_sw_s: set nA,
+//    poll_cq_sw_s: lone poll_cq,
 	ipo: set nA
 }
 fact {all a:nA| (a in RDMAaction)}
@@ -160,7 +160,7 @@ sig nEx extends nA {
     poll_cq_sw: lone poll_cq
 }
 fact {all a:nEx| not(a in Writer) and not (a in Reader)
-                       and remoteMachineAction[a]}
+                       and localMachineAction[a]}
 
 /*poll_cq*/
 sig poll_cq extends LocalCPUaction {
@@ -185,8 +185,7 @@ abstract sig Instruction {
         }
 */
 fact{all a:RDMAaction|
-    remoteMachineAction[a] => (sameOandD[a,a.instr.sx]
-                                             and sameOandD[a,a.instr.ex])
+    remoteMachineAction[a] => (sameOandD[a,a.instr.sx])
 }
 fact {all a:RDMAaction| all i: Instruction | instr[a] = i iff a in i.actions}
 

@@ -12,7 +12,7 @@ public class RatomicTest {
 		URL url = this.getClass().getResource("rga.ir");
 		TranslateValue translateValue = 
 			Driver.getResult(new File(url.getFile()));
-		assertEquals(15,translateValue.actionsNumber);
+		assertEquals(17,translateValue.actionsNumber);
 		
 		assertTrue(translateValue.actionSx.toString().contains("vsx10"));
 		assertTrue(translateValue.actionRWpq.toString().contains("vrwpq10"));
@@ -23,7 +23,7 @@ public class RatomicTest {
 		URL url = this.getClass().getResource("cas.ir");
 		TranslateValue translateValue = 
 			Driver.getResult(new File(url.getFile()));
-		assertEquals(14,translateValue.actionsNumber);
+		assertEquals(16,translateValue.actionsNumber);
 		
 		assertTrue(translateValue.actionSx.toString().contains("vsx9"));
 		assertTrue(translateValue.actionRWpq.toString().contains("vrwpq9"));

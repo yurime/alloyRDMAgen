@@ -38,7 +38,7 @@ sig MemoryAction in Action{
 pred cyclic [rel:Action->Action] {some a:Action | a in ^rel[a]}
 pred sameOandD [a,b:Action] {o[a]=o[b] and  d[a]=d[b] }
 pred remoteMachineAction [a:Action] { not host[o[a]]=host[d[a]] }
-//pred localMachineAction [a:Action] { host[o[a]]=host[d[a]] }
+pred localMachineAction [a:Action] { host[o[a]]=host[d[a]] }
 
 sig Reader in MemoryAction {
 	rV: one Int,
@@ -53,20 +53,32 @@ sig Writer in MemoryAction{
 
 sig Init extends W{}
 
+
 sig RDMAaction in Action {
     sw : set Action
 }
 
+
 abstract sig LocalCPUaction extends Action{
 	/* program order */
-    po: lone LocalCPUaction
+	po_tc : set LocalCPUaction,
+    po: lone LocalCPUaction, // for displaying po.
+	copo : set LocalCPUaction
 }
+
 
 /* start NIC action (start external)*/
 abstract sig Sx extends LocalCPUaction{}
 
 fact {all sx: Sx| not (sx in Reader) and not (sx in Writer)}
 fact {all sx: Sx| (sx in RDMAaction)}
+
+
+sig nEx extends nA {
+    poll_cq_sw: lone poll_cq
+}
+fact {all a:nEx| not(a in Writer) and not (a in Reader)
+                       and localMachineAction[a]}
 
 /*CPU read*/
 sig R extends LocalCPUaction{
@@ -157,9 +169,9 @@ abstract sig Execution {
  Consistent: Boolean
 }{
   {
-   (hb_cyclic  or cyclic_MoThenHbs or readAndMissPrevWriteInHbs
-   or tsoBufferCoherence1of3 or tsoBufferCoherence2of3  
-   or tsoBufferCoherence3of3  or tsoFenceViolation)
+   (cyclic_MoThenHbs or readAndMissPrevWriteInHbs
+   or tsoBufferCoherence1of3
+   or tsoBufferCoherence3of3)
    implies Consistent=False else Consistent=True
   }
 {all i:Init, a:Writer-Init| not i in mo[a]}
@@ -180,36 +192,25 @@ pred readAndMissPrevWriteInHbs [e:Execution] {
     some a,b,c:Action | a in c.corf and c in b.(e.hbs) and loc[a]=loc[b] and b in a.(e.mo)
 }
 
-pred tsoBufferCoherence1of3 [e:Execution]{some a,b,c:Action | 
-    c in a.rf and 
-    c in b.((e.mo) & (Action->(Action-nWpq))).sw.(e.hbs) and 
-    wl[a]=wl[b] 
-    and b in a.(e.mo)
-}
 
-pred tsoBufferCoherence2of3[e:Execution] {some a,b,c:Action | 
-    c in a.rf and 
-    (some d1,e1:Action |
-        d1 in b.(e.mo) and
-        e1 in d1.((e.hbs) & (nWpq->(nRpq+nRWpq))) and
-        sameOandD[e1,d1] and
-        c in e1.(e.hbs)
-    ) and
-    wl[a]=wl[b] 
+pred tsoBufferCoherence1of3 [e:Execution]{some a,b,c:Action | 
+    c in a.rf and // consistency 3
+    c in b.(e.mo).sw.(e.hbs) and 
+    loc[a]=loc[b] 
     and b in a.(e.mo)
 }
 
 pred tsoBufferCoherence3of3 [e:Execution]{some a,b,c:Action | 
-    c in a.rf and 
-    c in b.(e.mo).(rf-^po).(e.hbs) and 
-    wl[a]=wl[b] 
+    c in a.rf and  // consistency 4
+    c in b.(e.mo).(rf-po_tc).(e.hbs) and 
+     loc[a]=loc[b] 
     and b in a.(e.mo)
 }
 
 pred tsoFenceViolation [e:Execution]{some a,b,c:Action | 
     c in a.rf and 
     c in b.(e.mos).(e.hbs) and 
-    wl[a]=wl[b] 
+     loc[a]=loc[b] 
     and b in a.(e.mo)
 }
 
@@ -221,7 +222,7 @@ one sig RDMAExecution extends Execution{
 
 //mo basic definition
   {all disj w1,w2:Writer | 
-                 (host[wl[w1]]=host[wl[w2]]) 
+                 (host[loc[w1]]=host[loc[w2]]) 
                  <=> 
                 ((w1 in w2.mo) or (w2 in w1.mo))
    }
@@ -263,7 +264,7 @@ disj p0: Thr |
 
  /* X=0 */ 
  and o[iv0] = p0
- and wl[iv0] = X
+ and loc[iv0] = X
  and wV[iv0] = 0
 }
 

@@ -12,7 +12,7 @@ public class GetTest {
 		URL url = this.getClass().getResource("get.ir");
 		TranslateValue translateValue = 
 			Driver.getResult(new File(url.getFile()));
-		assertEquals(7,translateValue.actionsNumber);
+		assertEquals(8,translateValue.actionsNumber);
 		
 		assertTrue(translateValue.actionSx.toString().contains("vsx1"));
 		assertTrue(translateValue.actionRpq.toString().contains("vrpq1"));
@@ -24,7 +24,7 @@ public class GetTest {
 		URL url = this.getClass().getResource("twogets.ir");
 		TranslateValue translateValue = 
 			Driver.getResult(new File(url.getFile()));
-		assertEquals(14,translateValue.actionsNumber);
+		assertEquals(16,translateValue.actionsNumber);
 		
 		assertTrue(translateValue.actionSx.toString().contains("vsx2"));
 		assertTrue(translateValue.actionRpq.toString().contains("vrpq2"));

@@ -12,7 +12,7 @@ public class PutTest {
 		URL url = this.getClass().getResource("put.ir");
 		TranslateValue translateValue = 
 			Driver.getResult(new File(url.getFile()));
-		assertEquals(7,translateValue.actionsNumber);
+		assertEquals(8,translateValue.actionsNumber);
 		
 		assertTrue(translateValue.actionSx.toString().contains("vsx3"));
 		assertTrue(translateValue.actionRp.toString().contains("vrp3"));

@@ -14,7 +14,7 @@ public class FencedOpsTest {
 		URL url = this.getClass().getResource("getF.ir");
 		TranslateValue translateValue = 
 			Driver.getResult(new File(url.getFile()));
-		assertEquals(14,translateValue.actionsNumber);
+		assertEquals(17,translateValue.actionsNumber);
 		
 		assertTrue(translateValue.actionSx.toString().contains("vsx2"));
 		assertTrue(translateValue.actionRpq.toString().contains("vrpq2"));
@@ -29,7 +29,7 @@ public class FencedOpsTest {
 		URL url = this.getClass().getResource("putF.ir");
 		TranslateValue translateValue = 
 			Driver.getResult(new File(url.getFile()));
-		assertEquals(14,translateValue.actionsNumber);
+		assertEquals(17,translateValue.actionsNumber);
 
 		assertTrue(translateValue.actionSx.toString().contains("vsx7"));
 		assertTrue(translateValue.actionNf.toString().contains("vnf7"));
@@ -42,7 +42,7 @@ public class FencedOpsTest {
 		URL url = this.getClass().getResource("rgaF.ir");
 		TranslateValue translateValue = 
 			Driver.getResult(new File(url.getFile()));
-		assertEquals(15,translateValue.actionsNumber);
+		assertEquals(18,translateValue.actionsNumber);
 		
 		assertTrue(translateValue.actionSx.toString().contains("vsx10"));
 		assertTrue(translateValue.actionNf.toString().contains("vnf10"));
@@ -55,7 +55,7 @@ public class FencedOpsTest {
 		URL url = this.getClass().getResource("casF.ir");
 		TranslateValue translateValue = 
 			Driver.getResult(new File(url.getFile()));
-		assertEquals(14,translateValue.actionsNumber);
+		assertEquals(17,translateValue.actionsNumber);
 		
 		assertTrue(translateValue.actionSx.toString().contains("vsx9"));
 		assertTrue(translateValue.actionNf.toString().contains("vnf9"));

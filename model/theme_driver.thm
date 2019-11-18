@@ -93,6 +93,7 @@
    <relation name="instr"> <type name="d/e/sw/a/Action"/> <type name="d/e/sw/a/Instruction"/> </relation>
    <relation name="loc"> <type name="d/e/sw/a/Action"/> <type name="d/e/sw/a/MemoryLocation"/> </relation>
    <relation name="o"> <type name="d/e/sw/a/Action"/> <type name="d/e/sw/a/Thr"/> </relation>
+   <relation name="o"> <type name="d/e/sw/a/Register"/> <type name="d/e/sw/a/Thr"/> </relation>
    <relation name="rV"> <type name="d/e/sw/a/Action"/> <type name="Int"/> </relation>
    <relation name="wV"> <type name="d/e/sw/a/Action"/> <type name="Int"/> </relation>
 </edge>

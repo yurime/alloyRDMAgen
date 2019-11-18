@@ -12,7 +12,7 @@ public class PollCQTest {
 		URL url = this.getClass().getResource("pollcq.ir");
 		TranslateValue translateValue = 
 			Driver.getResult(new File(url.getFile()));
-		assertEquals(10,translateValue.actionsNumber);
+		assertEquals(12,translateValue.actionsNumber);
 		
 		assertTrue(translateValue.actionPollCQ.toString().contains("pcq4"));
 

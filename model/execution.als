@@ -23,9 +23,16 @@ abstract sig Execution {
    mos= (nRWpq+U) <: mo
 
   {
-   (cyclic_MoThenHbs or readAndMissPrevWriteInHbs
-   or tsoBufferCoherence1of3
-   or tsoBufferCoherence3of3)
+   ( hb_cyclic or cyclic_MoThenHb 
+      or {some a1,a2:Writer,a3:Reader | 
+         missPrevWrite3[a1,a2,a3]  
+         or missPrevWrite4[a1,a2,a3]
+         or missPrevWrite5[a1,a2,a3] 
+         or missPrevWrite6[a1,a2,a3]
+         or missPrevWrite7[a1,a2,a3] 
+         or missPrevWrite8[a1,a2,a3]
+         or missPrevWrite9[a1,a2,a3]
+    })
    implies Consistent=False else Consistent=True
   }
 }
@@ -36,6 +43,66 @@ pred hb_cyclic[e:Execution] {
       cyclic[e.hb]
 }
 
+pred cyclic_MoThenHb[e:Execution] {
+      cyclic[(W<:(e.hb)).(e.mo)]//consistentcy 2
+}
+
+
+pred missPrevWrite3[e:Execution,a1,a2:Writer,a3:Reader] {
+    a3 in a1.rf and // consistency 3
+    a3 in a2.(e.hb) and 
+	a2 not in nWpq and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
+}
+
+pred missPrevWrite4[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer|
+    a3 in a1.rf and // consistency 4
+    a4 in a2.(e.mo) and
+	a3 in a4.po.(^instr_sw).(e.hb) and 
+	a4 in W and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
+}
+pred missPrevWrite5[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer |
+    a3 in a1.rf and // consistency 5
+    a4 in a2.(e.mo) and
+	a3 in a4.(rf-po_tc).(e.hb) and 
+	a4 in W and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
+}
+pred missPrevWrite6[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer|
+    a3 in a1.rf and // consistency 6
+    a4 in a2.(e.mos) and
+	a3 in a4.(e.hb) and 
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
+}
+pred missPrevWrite7[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer |
+    a3 in a1.rf and // consistency 7
+    a4 in a2.(rf-nic_ord_sw) and
+	a3 in a4.(e.hb) and 
+	a2 in nWpq and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
+}
+pred missPrevWrite8[e:Execution, a1,a2:Writer,a3:Reader] {
+    a3 in a1.rf and // consistency 8
+    a2 in a3.nic_ord_sw and
+	a2 in nWpq and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
+}
+pred missPrevWrite9[e:Execution, a1,a2:Writer,a3:Reader] {some a4:Writer |
+    a3 in a1.rf and // consistency 8
+    a4 in a2.(e.mo) and
+    a3 in a4.(rf-nic_ord_sw).(e.hb) and
+	a4 in nWpq and
+    loc[a1]=loc[a2] 
+    and a2 in a1.(e.mo)
+}
+/*
 pred cyclic_MoThenHbs[e:Execution] {
       cyclic[(e.mo)+(e.hbs)]//consistentcy 1
 }
@@ -65,6 +132,7 @@ pred tsoFenceViolation [e:Execution]{some a,b,c:Action |
      loc[a]=loc[b] 
     and b in a.(e.mo)
 }
+*/
 //one sig TestExecution extends Execution{}
 pred p { 
            #Cas = 1 and

@@ -40,6 +40,7 @@ statement
  | casF ';'
  | load ';'
  | store ';'
+ | lcas ';'
  | pollcq ';'
  | assumption ';'
  | assertion ';'
@@ -54,6 +55,11 @@ store
  : Store '(' Identifier '=' rhs  ')'
  ;
 
+
+lcas
+ : LCas '(' Identifier '=' rhs '?' Number ')'
+ ;
+ 
 pollcq
  : PollCQ '(' Number ')'
  ;
@@ -184,6 +190,7 @@ Put      : 'put' ;
 Get      : 'get' ;
 Rga      : 'rga' ;
 Cas      : 'cas' ;
+LCas      : 'lcas' ;
 PutF      : 'putF' ;
 GetF      : 'getF' ;
 RgaF      : 'rgaF' ;

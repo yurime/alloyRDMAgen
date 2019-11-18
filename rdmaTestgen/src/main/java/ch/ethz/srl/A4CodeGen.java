@@ -21,6 +21,7 @@ class TGMemoryLocation {
     String label; // alloy name
     String prettyLabel;
     Integer initialValue;
+    TGThread initiatingThread;
 
     public TGMemoryLocation(A4CodeGen.State s,
                             String label) {
@@ -355,7 +356,7 @@ class TGRemotePut extends TGInstruction {
 
     @Override
     public String toString() {
-        return String.format("put (%s,%d,%s)", remoteWrite.getLoc(), getD().id, rp.getLoc());
+        return String.format("put (%s^%d,%s)", remoteWrite.getLoc(), getD().id, rp.getLoc());
     }
     public static TGInstruction Compose(State state, String label, Set<TGAction> actions,
 			Map<TGAction, TGThread> actionToThread, Map<TGThread, TGActionGraph> po) {
@@ -472,6 +473,27 @@ class TGRemoteGet extends TGInstruction {
         return rg;
 	}
 }
+class TGCompareAndSwap extends TGWriterImpl implements TGReader, TGWriter { 
+    Set<TGAction> actions;
+    int rV;
+
+    public TGCompareAndSwap(A4CodeGen.State s,
+                            String label,
+                            TGMemoryLocation     mem,
+                            int rv,
+                            int wv) {
+        super(s, label, mem, wv);
+        rV = rv;
+    }
+    public int getRv() { return rV; }
+    public void setRv(int rV) { this.rV = rV; }
+    public TGMemoryLocation getLoc() { return super.getLoc(); }
+    @Override public String toString() {
+        return String.format(" lcas '(' %s '=' %d '?' %d ')'",
+        		super.getLoc(), rV, super.getWv());
+    }
+
+}
 
 class TGRemoteCompareAndSwap extends TGInstruction {
     Set<TGAction> actions;
@@ -529,7 +551,6 @@ class TGRemoteCompareAndSwap extends TGInstruction {
         if (!(sx != null && ex != null && nlw != null && nrw != null)) throw new RuntimeException("Error constructing TGRemoteCompareAndSwap: rr or ew or sx are null");
 
         TGThread thr = actionToThread.get(nlw);
-        TGActionGraph tag = po.get(thr);
 
         TGRemoteCompareAndSwap rcas = new TGRemoteCompareAndSwap
             (state, label, rcasActions, sx, nrw, nlw,ex);
@@ -709,7 +730,7 @@ class TGFencedRemotePut extends TGInstruction {
 
     @Override
     public String toString() {
-        return String.format("putf (%s,%d,%s)", remoteWrite.getLoc(), getD().id, rp.getLoc());
+        return String.format("putf (%s^%d,%s)", remoteWrite.getLoc(), getD().id, rp.getLoc());
     }
     public static TGInstruction Compose(State state, String label, Set<TGAction> actions,
 			Map<TGAction, TGThread> actionToThread, Map<TGThread, TGActionGraph> po) {
@@ -1021,8 +1042,14 @@ public class A4CodeGen {
                 return new TGWritepq(s, label, wl, wV);
             if (stem.equals("Init"))
                 return new TGInitialValue(s, label, wl, wV);
-            if (stem.equals("nRWpq"))
-                return null;
+            if (stem.equals("U")) {
+            	if (labelToReaders.containsKey(label)) {
+            		TGCompareAndSwap rw = (TGCompareAndSwap)labelToReaders.get(label);
+                    rw.setLoc(wl); rw.setWv(wV);
+                    return rw;
+                }
+                return new TGCompareAndSwap(s, label, wl, 0, wV);
+            }
         }
         return new TGWriterImpl(s, label, wl, wV, true);
     }
@@ -1050,6 +1077,13 @@ public class A4CodeGen {
                 return new TGReadp(s, label, loc, rV);
             if (stem.equals("R"))
                 return new TGRead(s, label, loc, rV, null);
+            if (stem.equals("U"))
+                if (labelToWriters.containsKey(label)) {
+                	TGCompareAndSwap rw = (TGCompareAndSwap)labelToWriters.get(label);
+                    rw.rV = rV;
+                    return rw;
+                }
+                return new TGCompareAndSwap(s, label, loc, rV, 0);
         }
         if (true) {
             System.out.println("TGReader Matcher error, can't parse: " + label);
@@ -1313,6 +1347,7 @@ public class A4CodeGen {
                 for (A4Tuple iv : initialValues) {
                     TGWriter w = labelToWriters.get(iv.atom(0));
                     w.getLoc().initialValue = w.getWv();
+                    w.getLoc().initiatingThread = actionToThread.get(w);
                 }
             }
         }
@@ -1608,6 +1643,24 @@ public class A4CodeGen {
             process_number++;
 
             boolean first = true;
+            if (!n.memoryLocations.isEmpty()) {
+                StringBuilder memlocs = new StringBuilder("shared ");
+                for (TGMemoryLocation ml : n.memoryLocations) {
+                    if (ml.initialValue != null && ml.initiatingThread.equals(t)) {
+                        if (first)
+                            first = false;
+                        else
+                            memlocs.append(", ");
+                        memlocs.append(ml);
+                        memlocs.append(" = "); 
+                        memlocs.append(ml.initialValue.toString());
+                    }
+                }
+                if(!first) { //if there was at least one shared variable
+                	memlocs.append(";");
+                	w.println(memlocs);
+                }
+            }
             
             if (!t.registers.isEmpty()) {
                 StringBuilder locals = new StringBuilder("local ");
@@ -1661,25 +1714,6 @@ public class A4CodeGen {
             if (node_number > 1) w.println();
             w.format("node %d\n", n.id);
             node_number++;
-
-            boolean first = true;
-            if (!n.memoryLocations.isEmpty()) {
-                StringBuilder memlocs = new StringBuilder("shared ");
-                for (TGMemoryLocation ml : n.memoryLocations) {
-                    if (first)
-                        first = false;
-                    else
-                        memlocs.append(", ");
-
-                    memlocs.append(ml);
-                    if (ml.initialValue != null) {
-                        memlocs.append(" = "); 
-                        memlocs.append(ml.initialValue.toString());
-                    }
-                }
-                memlocs.append(";");
-                w.println(memlocs);
-            }
 
             if (!n.threads.isEmpty()) {
             	printThreads(w, number, n);

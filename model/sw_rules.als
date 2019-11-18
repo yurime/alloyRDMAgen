@@ -4,19 +4,19 @@ open actions as a
 
 fact{all a:Sx |
 	a.sw = a.instr_sw
-and
-	a.sw_s = a.instr_sw
+//and
+	//a.sw_s = a.instr_sw
 }
 
 fact{all a:nA |
 	a.sw = a.nic_ord_sw+a.poll_cq_sw+a.instr_sw
-and 	a.sw_s = a.nic_ord_sw_s+a.poll_cq_sw_s+a.instr_sw
+//and 	a.sw_s = a.nic_ord_sw_s+a.poll_cq_sw_s+a.instr_sw
 }
 /*
 if nRp--isw-->nWpq--isw-->nEx--pf->poll then 
    remove pf and set nRp--pf-->poll  
 */
-fact{all a:nA |
+/*fact{all a:nA |
 	#(nWpq & (a.((~instr_sw) :> nA)))>0 => a.poll_cq_sw_s=none
 	else a in nRp => a.poll_cq_sw_s=a.(instr_sw).(instr_sw).(poll_cq_sw)
 	else a.poll_cq_sw_s=a.poll_cq_sw 
@@ -26,7 +26,7 @@ fact{all a:nA |
 	(a in nWp) => a.nic_ord_sw_s= a.~nic_ord_sw.instr_sw
     else a.nic_ord_sw_s= a.nic_ord_sw
 }
-
+*/
 //-----------
 /**instr-sw**/
 //-----------
@@ -146,7 +146,7 @@ fact{all disj na:nEx, pcq:poll_cq  |
           (pcq=na.poll_cq_sw => 
                       (
                          (pcq in na.instr.sx.po_tc)
-                          and (sameOandD[pcq,na.instr.ex])
+                          and (sameOandD[pcq,na.instr.sx])
                       )
          )
 }
@@ -175,7 +175,7 @@ pred p2 {
            #Cas = 1 and
             #Thr = 2}
 
-check{not cyclic[sw]} for 10 expect 0
+//check{not cyclic[sw]} for 10 expect 0
 
 run getThenPutF for 13
 run putAfterPut for 12
