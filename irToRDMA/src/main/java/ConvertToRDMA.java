@@ -119,6 +119,10 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
 			for (Var v : varsValue.procToLocal.get(me)) {
 			    os.printf(tabs + "REMOTE_SHARED(tr%s_%s, con.at(0));\n", me, v.name);
 	    	}
+
+			for (Var v : varsValue.procToShared.get(me)) {
+			    os.printf(tabs + "REMOTE_SHARED(tr%s_%s, con.at(0));\n", me, v.name);
+	    	}
 		}
    }
 
@@ -130,11 +134,12 @@ public class ConvertToRDMA { // Intelliband, VPI_Verbs API
     	for (Var v : varsValue.procToLocal.get(p)) {
     		if (vars.length() > 0) vars.append(", ");
 			vars.append(v.name);
+			vars.append("=0");
     	}
 
     	os.printf(tabs + "int my_id=%s;\n", p);
     	os.printf(tabs + "int ret=0;\n");
-    	os.println(tabs + "string whoami=\"thr\"+my_id;");
+    	os.println(tabs + "string whoami=\"thr\"+std::to_string(my_id);");
     	if(vars.length() > 0) 
     		os.printf(tabs + "uint64_t %s;\n", vars);
     	os.printf(tabs + "rdma::ConnectionManager con(%s, thr_ports[%s]);\n", p, p);
@@ -197,7 +202,8 @@ public void incorporateTestWitnesses(PrintStream os) {
     	    os.println(tabs + "if (0) ;/*NO EXPECTED OUTPUTS in IR*/");
     	    return;
       	}
-      	os.println(tabs + "uint64_t " + remote_vars + ";");
+      	if(remote_vars.length() > 0)
+      		os.println(tabs + "uint64_t " + remote_vars + ";");
       	for (int i = 0; i < instanceValue.outputs.size(); i++) {
             String output = instanceValue.outputs.get(i);
             os.printf(tabs + "%sif %s {\n", 

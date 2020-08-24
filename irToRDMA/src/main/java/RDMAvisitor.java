@@ -160,7 +160,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
         String newInst = String.format
             ("POST_CAS(con.at(%d), whoami, %s,%s,%d,%d);", 
-            		destProcessNumber, writeVar, rwVar, cmpVal,wrtVal);
+            		destProcessNumber, rwVar, writeVar,cmpVal,wrtVal);
         insts.add(newInst);
         if(! result.atomicVars.containsKey(destProcessNumber)) {
         	result.atomicVars.put(destProcessNumber, new HashSet<>());
@@ -192,7 +192,7 @@ public class RDMAvisitor extends TLBaseVisitor<Object> {
 
         String newInst = String.format
             ("POST_RGA(con.at(%d), whoami, %s,%s,%d);", 
-            		destProcessNumber, writeVar, rwVar, diffV);
+            		destProcessNumber,rwVar,  writeVar, diffV);
         insts.add(newInst);
         if(! result.atomicVars.containsKey(destProcessNumber)) {
         	result.atomicVars.put(destProcessNumber, new HashSet<>());
