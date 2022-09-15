@@ -4,8 +4,8 @@ Repository for development
 # To build
 ## rdmaTestgen
 ### from commandline
-- `gradle jar`
-May need to set JAVA_HOME to java 8.1 beforehand.
+- run `gradle jar`
+- May need to set JAVA_HOME to java 8.1 beforehand.
 ### eclipse
 - Instal the gradel ‘buildship’ from eclipse marketplace
 - Add from the folder lib the alloy4.2.jar file to the build
