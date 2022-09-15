@@ -3,7 +3,7 @@ Repository for development
 
 # To build
 ## rdmaTestgen
-`gradle jar' from commandline
+`gradle jar` from commandline
 May need to set JAVA_HOME to java 8.1 beforehand.
 Or use Eclipse to build
 
