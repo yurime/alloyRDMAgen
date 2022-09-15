@@ -8,7 +8,7 @@ Repository for development
 - May need to set JAVA_HOME to java 8.1 beforehand.
 ### eclipse
 - Instal the gradel ‘buildship’ from eclipse marketplace
-- Add from the folder lib the alloy4.2.jar file to the build
+- Add from the folder lib the alloy4.2.jar file to the build path
 - Add Junit library to build path
 
 # To run 
