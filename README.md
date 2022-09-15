@@ -3,16 +3,16 @@ Repository for development
 
 # To build
 ## rdmaTestgen
-gradle jar
-
+`gradle jar' from commandline
 May need to set JAVA_HOME to java 8.1 beforehand.
+Or use Eclipse to build
 
 # To run 
 ## sequence
 - rdmaTestgen to generate alloy tests
 - the test may have duplicates, run: `fdupes -dN output`
-- generate all possible outputs 
-- generate ir
+- run alloy from irToRDMA to generate all possible outputs 
+- irToRDMA to generate ir 
 - run on rdma
 
 ## rdmaTestgen generate ir
@@ -25,7 +25,7 @@ executes inside generation of each example
 remove duplicate files
 `fdupes -dN generated_ir/`
 
-## irToRDMA generate all possible outputs
+## alloy from irToRDMA to generate all possible outputs 
 ./run_gen_all_outpts.sh
 
 ## irToRDMA 
